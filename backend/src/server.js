@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
-
+import helmet from "helmet";
+import { generalLimiter } from "./middleware/rateLimiter.js";
 import { config, aiEnabled } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -14,10 +15,12 @@ import chatRoutes from "./routes/chatRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 
 const app = express();
+app.use(helmet());
 
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json());
 app.use(morgan("dev"));
+app.use("/api", generalLimiter);
 
 app.get("/", (req, res) => {
   res.json({
