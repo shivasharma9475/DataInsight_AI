@@ -1,6 +1,7 @@
 import FormData from "form-data";
 import mlClient from "../services/mlClient.js";
 import Dataset from "../models/Dataset.js";
+import path from "path";
 
 async function getOwnedDataset(datasetMongoIdOrMlId, userId) {
   // Frontend addresses datasets by the ML service's dataset_id (UUID), which
@@ -16,22 +17,49 @@ async function getOwnedDataset(datasetMongoIdOrMlId, userId) {
 
 export async function upload(req, res, next) {
   try {
-    if (!req.file) return res.status(400).json({ detail: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({
+        detail: "No file uploaded",
+      });
+    }
+
+    // Remove any path information from the uploaded filename
+    const baseName = path.basename(req.file.originalname);
+
+    // Keep only safe characters
+    const safeFilename = baseName.replace(
+      /[^a-zA-Z0-9._-]/g,
+      "_"
+    );
 
     const form = new FormData();
-    form.append("file", req.file.buffer, { filename: req.file.originalname });
 
-    const { data } = await mlClient.post("/ingest", form, { headers: form.getHeaders() });
+    form.append("file", req.file.buffer, {
+      filename: safeFilename,
+      contentType: req.file.mimetype,
+    });
+
+    const { data } = await mlClient.post(
+      "/ingest",
+      form,
+      {
+        headers: form.getHeaders(),
+      }
+    );
 
     const doc = await Dataset.create({
       owner: req.userId,
       mlDatasetId: data.dataset_id,
-      filename: req.file.originalname,
+      filename: safeFilename,
       rowCount: data.profile.row_count,
       columnCount: data.profile.column_count,
     });
 
-    res.json({ dataset_id: doc.mlDatasetId, filename: doc.filename, profile: data.profile });
+    return res.json({
+      dataset_id: doc.mlDatasetId,
+      filename: doc.filename,
+      profile: data.profile,
+    });
   } catch (err) {
     next(err);
   }
