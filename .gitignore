@@ -1,0 +1,16 @@
+# Node
+node_modules/
+dist/
+.env
+*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+ml-service/uploads/*
+!ml-service/uploads/.gitkeep
+
+# OS
+.DS_Store

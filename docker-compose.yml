@@ -1,0 +1,43 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  ml-service:
+    build: ./ml-service
+    restart: unless-stopped
+    env_file: ./ml-service/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ml-service/uploads:/app/uploads
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/datainsight_ai
+      - ML_SERVICE_URL=http://ml-service:8001
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+      - ml-service
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
