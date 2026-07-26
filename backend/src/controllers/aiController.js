@@ -28,3 +28,33 @@ export async function insights(req, res, next) {
     next(err);
   }
 }
+
+export async function rootCause(req, res, next) {
+  try {
+    const {
+      dataset_id,
+      date_column,
+      metric_column,
+      dimension_columns = [],
+      period = "M",
+    } = req.body;
+
+    // Verify that this dataset belongs to the authenticated user
+    await getOwnedDataset(dataset_id, req.userId);
+
+    const { data } = await mlClient.post(
+      "/analysis/root-cause",
+      {
+        dataset_id,
+        date_column,
+        metric_column,
+        dimension_columns,
+        period,
+      }
+    );
+
+    return res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
