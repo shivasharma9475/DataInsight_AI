@@ -32,26 +32,37 @@ export async function insights(req, res, next) {
 export async function rootCause(req, res, next) {
   try {
     const {
-      dataset_id,
-      date_column,
-      metric_column,
-      dimension_columns = [],
-      period = "M",
-    } = req.body;
+  dataset_id,
+  date_column,
+  metric_column,
+  dimension_columns = [],
+  period = "M",
+  comparison_mode = "full",
+} = req.body;
+
+console.log("[NODE RCA DEBUG]", {
+  dataset_id,
+  date_column,
+  metric_column,
+  dimension_columns,
+  period,
+  comparison_mode,
+});
 
     // Verify that this dataset belongs to the authenticated user
     await getOwnedDataset(dataset_id, req.userId);
 
     const { data } = await mlClient.post(
-      "/analysis/root-cause",
-      {
-        dataset_id,
-        date_column,
-        metric_column,
-        dimension_columns,
-        period,
-      }
-    );
+  "/analysis/root-cause",
+  {
+    dataset_id,
+    date_column,
+    metric_column,
+    dimension_columns,
+    period,
+    comparison_mode,
+  }
+);
 
     return res.json(data);
   } catch (err) {

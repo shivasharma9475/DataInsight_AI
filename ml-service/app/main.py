@@ -17,6 +17,7 @@ from app.services import data_processing as dp
 from app.services import ml_engine
 from app.services import ai_engine
 from app.services import report_engine
+from app.services import root_cause_engine
 
 app = FastAPI(title="DataInsight AI — ML Service (internal)")
 
@@ -157,6 +158,62 @@ async def ai_insights(dataset_id: str):
     generated = ai_engine.generate_local_insights(profile_data, stats, corr, outliers_data)
     summary = ai_engine.generate_local_summary(profile_data, generated)
     return {"insights": generated, "summary": summary}
+
+@app.post(
+    "/analysis/root-cause",
+    dependencies=[Depends(require_internal_key)],
+)
+async def root_cause_analysis(payload: dict):
+    dataset_id = payload.get("dataset_id")
+    date_column = payload.get("date_column")
+    metric_column = payload.get("metric_column")
+    dimension_columns = payload.get("dimension_columns", [])
+    period = payload.get("period", "M")
+    comparison_mode = payload.get("comparison_mode", "full")
+
+    if not dataset_id:
+        raise HTTPException(
+            status_code=400,
+            detail="dataset_id is required",
+        )
+
+    if not date_column:
+        raise HTTPException(
+            status_code=400,
+            detail="date_column is required",
+        )
+
+    if not metric_column:
+        raise HTTPException(
+            status_code=400,
+            detail="metric_column is required",
+        )
+
+    df = _load_or_404(dataset_id)
+
+    try:
+        result = root_cause_engine.analyze_period_change(
+    df=df,
+    date_column=date_column,
+    metric_column=metric_column,
+    dimension_columns=dimension_columns,
+    period=period,
+    comparison_mode=comparison_mode,
+)
+
+        return result
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Root cause analysis failed",
+        )
 
 
 @app.post("/chat/ask", dependencies=[Depends(require_internal_key)])

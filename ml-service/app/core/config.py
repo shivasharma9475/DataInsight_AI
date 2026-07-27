@@ -1,8 +1,16 @@
 import os
+from dotenv import load_dotenv
+
+# Load variables from ml-service/.env
+load_dotenv()
 
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
-# Shared secret so this internal service only accepts calls from the Node backend
-INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "dev_internal_key_change_me")
+
+# Shared secret between Node backend and ML service
+INTERNAL_API_KEY = os.environ.get(
+    "INTERNAL_API_KEY",
+    "dev_internal_key_change_me"
+)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 

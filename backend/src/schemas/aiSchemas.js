@@ -21,4 +21,8 @@ export const rootCauseSchema = z.object({
   period: z
     .enum(["D", "W", "M", "Q", "Y"])
     .default("M"),
+
+  comparison_mode: z
+    .enum(["full", "comparable"])
+    .default("full"),
 });

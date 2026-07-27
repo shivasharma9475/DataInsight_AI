@@ -10,15 +10,22 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Chat from "./pages/Chat.jsx";
 import MLStudio from "./pages/MLStudio.jsx";
 import Reports from "./pages/Reports.jsx";
+import RootCause from "./pages/RootCause.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 
 function ProtectedLayout({ children }) {
   const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-950 bg-grid-glow">
       <Sidebar />
-      <main className="flex-1 p-6 md:p-8 overflow-x-hidden">{children}</main>
+      <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
+        {children}
+      </main>
     </div>
   );
 }
@@ -29,6 +36,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+
       <Route
         path="/upload"
         element={
@@ -37,6 +45,7 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
       <Route
         path="/dashboard/:datasetId"
         element={
@@ -45,6 +54,16 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
+      <Route
+        path="/root-cause/:datasetId"
+        element={
+          <ProtectedLayout>
+            <RootCause />
+          </ProtectedLayout>
+        }
+      />
+
       <Route
         path="/chat/:datasetId"
         element={
@@ -53,6 +72,7 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
       <Route
         path="/ml/:datasetId"
         element={
@@ -61,6 +81,7 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
       <Route
         path="/reports/:datasetId"
         element={
@@ -69,6 +90,7 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
