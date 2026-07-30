@@ -17,7 +17,10 @@ from app.services import data_processing as dp
 from app.services import ml_engine
 from app.services import ai_engine
 from app.services import report_engine
-from app.services import root_cause_engine
+from app.services import (
+    root_cause_engine,
+    copilot_engine,
+)
 
 app = FastAPI(title="DataInsight AI — ML Service (internal)")
 
@@ -252,3 +255,57 @@ def _load_or_404(dataset_id: str, cleaned: bool = True):
         return dp.load_dataframe(dataset_id, cleaned=cleaned)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
+@app.post(
+    "/copilot/query",
+    dependencies=[Depends(require_internal_key)],
+)
+async def copilot_query(payload: dict):
+    dataset_id = payload.get("dataset_id")
+    tool = payload.get("tool")
+    arguments = payload.get("arguments", {})
+
+    if not dataset_id:
+        raise HTTPException(
+            status_code=400,
+            detail="dataset_id is required",
+        )
+
+    if not tool:
+        raise HTTPException(
+            status_code=400,
+            detail="tool is required",
+        )
+
+    if not isinstance(arguments, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="arguments must be an object",
+        )
+
+    df = _load_or_404(dataset_id)
+
+    try:
+        return copilot_engine.execute_tool(
+            df=df,
+            tool=tool,
+            arguments=arguments,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except Exception as exc:
+        print(
+            "[COPILOT ERROR]",
+            type(exc).__name__,
+            str(exc),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Copilot analysis failed",
+        )

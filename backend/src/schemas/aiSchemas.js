@@ -26,3 +26,21 @@ export const rootCauseSchema = z.object({
     .enum(["full", "comparable"])
     .default("full"),
 });
+
+export const copilotQuerySchema = z.object({
+  dataset_id: z
+    .string()
+    .min(1, "dataset_id is required"),
+
+  tool: z.enum([
+    "dataset_summary",
+    "aggregate",
+    "group_by",
+    "trend",
+    "root_cause",
+  ]),
+
+  arguments: z
+    .record(z.any())
+    .default({}),
+});

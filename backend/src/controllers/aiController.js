@@ -69,3 +69,55 @@ console.log("[NODE RCA DEBUG]", {
     next(err);
   }
 }
+
+
+export async function copilotQuery(req, res, next) {
+  try {
+    const {
+      dataset_id,
+      tool,
+      arguments: toolArguments = {},
+    } = req.body;
+
+    if (!dataset_id) {
+      return res.status(400).json({
+        message: "dataset_id is required",
+      });
+    }
+
+    if (!tool) {
+      return res.status(400).json({
+        message: "tool is required",
+      });
+    }
+
+    if (
+      typeof toolArguments !== "object" ||
+      toolArguments === null ||
+      Array.isArray(toolArguments)
+    ) {
+      return res.status(400).json({
+        message: "arguments must be an object",
+      });
+    }
+
+    // Security: make sure dataset belongs to logged-in user.
+    await getOwnedDataset(
+      dataset_id,
+      req.userId
+    );
+
+    const { data } = await mlClient.post(
+      "/copilot/query",
+      {
+        dataset_id,
+        tool,
+        arguments: toolArguments,
+      }
+    );
+
+    return res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}

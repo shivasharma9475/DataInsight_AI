@@ -146,4 +146,12 @@ export const reportApi = {
     ),
 };
 
+export const copilotApi = {
+  query: (payload) =>
+    api.post(
+      "/ai/copilot",
+      payload
+    ),
+};
+
 export default api;
