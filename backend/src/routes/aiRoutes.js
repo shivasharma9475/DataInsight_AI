@@ -9,6 +9,7 @@ import { validate } from "../middleware/validate.js";
 import {
   rootCauseSchema,
   copilotQuerySchema,
+  recommendationSchema,
 } from "../schemas/aiSchemas.js";
 
 const router = Router();
@@ -16,7 +17,11 @@ const router = Router();
 // All AI routes require authentication
 router.use(requireAuth);
 
+
+// ============================================================
 // Root Cause Analysis
+// ============================================================
+
 router.post(
   "/root-cause",
   expensiveOperationLimiter,
@@ -24,19 +29,41 @@ router.post(
   aiController.rootCause
 );
 
-// AI Insights
-router.get(
-  "/:datasetId/insights",
+
+// ============================================================
+// Recommendation Engine
+// ============================================================
+
+router.post(
+  "/recommendations",
   expensiveOperationLimiter,
-  aiController.insights
+  validate(recommendationSchema),
+  aiController.recommendations
 );
 
+
+// ============================================================
 // Data Copilot
+// ============================================================
+
 router.post(
   "/copilot",
   expensiveOperationLimiter,
   validate(copilotQuerySchema),
   aiController.copilotQuery
 );
+
+
+// ============================================================
+// AI Insights
+// IMPORTANT: Keep dynamic :datasetId route after static routes.
+// ============================================================
+
+router.get(
+  "/:datasetId/insights",
+  expensiveOperationLimiter,
+  aiController.insights
+);
+
 
 export default router;

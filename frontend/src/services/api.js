@@ -96,6 +96,12 @@ export const mlApi = {
 export const aiApi = {
   insights: (id) =>
     api.get(`/api/ai/${id}/insights`),
+
+  recommendations: (payload) =>
+    api.post(
+      "/api/ai/recommendations",
+      payload
+    ),
 };
 
 // Root Cause Analysis
@@ -149,7 +155,7 @@ export const reportApi = {
 export const copilotApi = {
   query: (payload) =>
     api.post(
-      "/ai/copilot",
+      "/api/ai/copilot",
       payload
     ),
 };

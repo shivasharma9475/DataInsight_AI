@@ -12,6 +12,7 @@ import MLStudio from "./pages/MLStudio.jsx";
 import Reports from "./pages/Reports.jsx";
 import RootCause from "./pages/RootCause.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import Recommendations from "./pages/Recommendations.jsx";
 
 function ProtectedLayout({ children }) {
   const { isAuthenticated } = useAuth();
@@ -90,6 +91,15 @@ export default function App() {
           </ProtectedLayout>
         }
       />
+
+      <Route
+  path="/recommendations/:datasetId"
+  element={
+    <ProtectedLayout>
+      <Recommendations />
+    </ProtectedLayout>
+  }
+/>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -9,6 +9,7 @@ import {
   LogOut,
   Sparkles,
   SearchCode,
+  Lightbulb,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -40,10 +41,16 @@ export default function Sidebar() {
           icon: Brain,
         },
         {
+  to: `/recommendations/${datasetId}`,
+  label: "Recommendations",
+  icon: Lightbulb,
+},
+        {
           to: `/reports/${datasetId}`,
           label: "Reports",
           icon: FileDown,
         },
+        
       ]
     : [];
 

@@ -121,3 +121,101 @@ export async function copilotQuery(req, res, next) {
     next(err);
   }
 }
+
+export async function recommendations(req, res, next) {
+  try {
+    const {
+      dataset_id,
+      metric_column,
+      dimension_columns = [],
+      max_recommendations = 20,
+    } = req.body;
+
+    // 1. Verify dataset ownership
+    const doc = await getOwnedDataset(
+      dataset_id,
+      req.userId
+    );
+
+    // 2. Deterministic engine ALWAYS runs first
+    const { data } = await mlClient.post(
+      "/recommendations",
+      {
+        dataset_id,
+        metric_column,
+        dimension_columns,
+        max_recommendations,
+      }
+    );
+
+    let aiExplanation = null;
+    let aiEnhanced = false;
+
+    // 3. Optional OpenAI enhancement
+    // Failure here must NEVER break deterministic recommendations.
+    if (
+      aiEnabled() &&
+      data.recommendations?.length > 0
+    ) {
+      try {
+        const context = `
+Dataset: ${doc.filename}
+Rows: ${doc.rowCount}
+
+Metric:
+${metric_column}
+
+Dimensions:
+${JSON.stringify(dimension_columns)}
+
+Verified deterministic analysis:
+${JSON.stringify({
+  summary: data.summary,
+  recommendations: data.recommendations,
+})}
+`;
+
+        const polished = await enhanceWithOpenAI(
+          `
+Explain these verified recommendations to the user.
+
+Rules:
+- Use ONLY the supplied analysis.
+- Do not invent numbers.
+- Do not calculate new statistics.
+- Do not change scores.
+- Do not change priorities.
+- Do not claim causation unless the evidence supports it.
+- Highlight the most important findings first.
+- Keep the explanation concise and actionable.
+`,
+          context
+        );
+
+        if (polished) {
+          aiExplanation = polished;
+          aiEnhanced = true;
+        }
+      } catch (error) {
+        console.warn(
+          "[RECOMMENDATIONS] OpenAI enhancement failed. Using deterministic result:",
+          error.message
+        );
+      }
+    }
+
+    // 4. Deterministic recommendations are always authoritative
+    return res.json({
+      ...data,
+
+      ai_explanation: aiExplanation,
+      ai_enhanced: aiEnhanced,
+
+      engine: aiEnhanced
+        ? "deterministic+openai"
+        : "deterministic",
+    });
+  } catch (err) {
+    next(err);
+  }
+}

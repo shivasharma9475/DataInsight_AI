@@ -44,3 +44,30 @@ export const copilotQuerySchema = z.object({
     .record(z.any())
     .default({}),
 });
+
+export const recommendationSchema = z.object({
+  dataset_id: z
+    .string()
+    .min(1, "dataset_id is required"),
+
+  metric_column: z
+    .string()
+    .min(1, "metric_column is required"),
+
+  dimension_columns: z
+    .array(
+      z.string().min(1)
+    )
+    .max(
+      10,
+      "Maximum 10 dimensions are allowed"
+    )
+    .default([]),
+
+  max_recommendations: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20),
+});

@@ -11,6 +11,7 @@ import os
 import io
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
 from fastapi.responses import StreamingResponse
+from app.services.recommendation_engine import generate_recommendations
 
 from app.core.config import settings, INTERNAL_API_KEY
 from app.services import data_processing as dp
@@ -248,6 +249,88 @@ async def pdf_report(dataset_id: str, filename: str = "dataset"):
     summary = ai_engine.generate_local_summary(profile_data, insights)
     content = report_engine.build_pdf_report(filename, profile_data, insights, summary)
     return StreamingResponse(io.BytesIO(content), media_type="application/pdf")
+
+@app.post(
+    "/recommendations",
+    dependencies=[Depends(require_internal_key)],
+)
+async def recommendations(payload: dict):
+    dataset_id = payload.get("dataset_id")
+    metric_column = payload.get("metric_column")
+    dimension_columns = payload.get(
+        "dimension_columns",
+        [],
+    )
+    max_recommendations = payload.get(
+        "max_recommendations",
+        20,
+    )
+
+    # --------------------------------------------------------
+    # Validation
+    # --------------------------------------------------------
+
+    if not dataset_id:
+        raise HTTPException(
+            status_code=400,
+            detail="dataset_id is required",
+        )
+
+    if not metric_column:
+        raise HTTPException(
+            status_code=400,
+            detail="metric_column is required",
+        )
+
+    if not isinstance(dimension_columns, list):
+        raise HTTPException(
+            status_code=400,
+            detail="dimension_columns must be an array",
+        )
+
+    # --------------------------------------------------------
+    # Load dataset
+    # --------------------------------------------------------
+
+    df = _load_or_404(dataset_id)
+
+    # --------------------------------------------------------
+    # Deterministic Recommendation Engine
+    # --------------------------------------------------------
+
+    try:
+        result = generate_recommendations(
+            df=df,
+            metric_column=metric_column,
+            dimension_columns=dimension_columns,
+            max_recommendations=max_recommendations,
+        )
+
+        return result
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        )
+
+    except TypeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        )
+
+    except Exception as exc:
+        print(
+            "[RECOMMENDATION ERROR]",
+            type(exc).__name__,
+            str(exc),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Recommendation analysis failed",
+        )
 
 
 def _load_or_404(dataset_id: str, cleaned: bool = True):
