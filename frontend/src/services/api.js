@@ -160,4 +160,9 @@ export const copilotApi = {
     ),
 };
 
+export const whatIfApi = {
+  simulate: (payload) =>
+    api.post("/api/what-if", payload),
+};
+
 export default api;

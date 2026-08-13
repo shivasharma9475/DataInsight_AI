@@ -9,6 +9,7 @@ import Upload from "./pages/Upload.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Chat from "./pages/Chat.jsx";
 import MLStudio from "./pages/MLStudio.jsx";
+import WhatIfSimulator from "./pages/WhatIfSimulator.jsx";
 import Reports from "./pages/Reports.jsx";
 import RootCause from "./pages/RootCause.jsx";
 import Sidebar from "./components/Sidebar.jsx";
@@ -97,6 +98,15 @@ export default function App() {
   element={
     <ProtectedLayout>
       <Recommendations />
+    </ProtectedLayout>
+  }
+/>
+
+<Route
+  path="/what-if/:datasetId"
+  element={
+    <ProtectedLayout>
+      <WhatIfSimulator />
     </ProtectedLayout>
   }
 />

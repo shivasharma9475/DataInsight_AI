@@ -13,6 +13,7 @@ import mlRoutes from "./routes/mlRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import whatIfRoutes from "./routes/whatIfRoutes.js";
 
 const app = express();
 
@@ -47,6 +48,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/datasets", datasetRoutes);
 app.use("/api/ml", mlRoutes);
 app.use("/api/ai", aiRoutes);
+app.use(
+  "/api/what-if",
+  whatIfRoutes
+);
 app.use("/api/chat", chatRoutes);
 app.use("/api/reports", reportRoutes);
 

@@ -22,8 +22,11 @@ from app.services import (
     root_cause_engine,
     copilot_engine,
 )
+from app.what_if import router as what_if_router
 
 app = FastAPI(title="DataInsight AI — ML Service (internal)")
+
+app.include_router(what_if_router)
 
 
 async def require_internal_key(x_internal_key: str = Header(default="")):

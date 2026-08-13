@@ -10,6 +10,7 @@ import {
   Sparkles,
   SearchCode,
   Lightbulb,
+  Calculator,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -40,6 +41,11 @@ export default function Sidebar() {
           label: "ML Studio",
           icon: Brain,
         },
+        {
+  to: `/what-if/${datasetId}`,
+  label: "What-if Simulator",
+  icon: Calculator,
+},
         {
   to: `/recommendations/${datasetId}`,
   label: "Recommendations",
