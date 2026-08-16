@@ -95,8 +95,6 @@ export default function RootCause() {
     comparison_mode: comparisonMode,
   };
 
-  console.log("[FRONTEND RCA DEBUG]", payload);
-
   try {
     const { data } = await rcaApi.analyze(payload);
     setResult(data);

@@ -3,11 +3,29 @@ import OpenAI from "openai";
 
 // =========================================================
 // OpenAI client
+//
+// IMPORTANT: created lazily, only when an API key is present
+// and a call is actually about to be made. Instantiating this
+// eagerly at module load throws when OPENAI_API_KEY is unset,
+// which would crash the whole backend on startup -- OpenAI
+// must remain fully optional.
 // =========================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openaiClient = null;
+
+export function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  if (!_openaiClient) {
+    _openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return _openaiClient;
+}
 
 
 // =========================================================
@@ -43,7 +61,7 @@ const ALLOWED_PERIODS = new Set([
 // Helpers
 // =========================================================
 
-function normalize(text) {
+export function normalize(text) {
   return String(text || "")
     .toLowerCase()
     .replace(/[_-]+/g, " ")
@@ -62,7 +80,7 @@ function getColumnName(column) {
 }
 
 
-function buildSchema(profile = {}) {
+export function buildSchema(profile = {}) {
   return {
     columns: (profile.columns || [])
       .map(getColumnName)
@@ -80,7 +98,7 @@ function buildSchema(profile = {}) {
 }
 
 
-function extractJson(text) {
+export function extractJson(text) {
   if (!text) {
     throw new Error(
       "OpenAI planner returned an empty response"
@@ -107,7 +125,7 @@ function extractJson(text) {
 // Plan validation
 // =========================================================
 
-function validatePlan(plan, schema) {
+export function validatePlan(plan, schema) {
   if (
     !plan ||
     typeof plan !== "object" ||
@@ -344,7 +362,7 @@ function validatePlan(plan, schema) {
 // Deterministic fallback helpers
 // =========================================================
 
-function findMentionedColumn(
+export function findMentionedColumn(
   message,
   columns = []
 ) {
@@ -376,7 +394,7 @@ function findMentionedColumn(
 }
 
 
-function detectAggregation(message) {
+export function detectAggregation(message) {
   const text = normalize(message);
 
   if (
@@ -415,7 +433,7 @@ function detectAggregation(message) {
 }
 
 
-function detectPeriod(message) {
+export function detectPeriod(message) {
   const text = normalize(message);
 
   if (
@@ -458,7 +476,7 @@ function detectPeriod(message) {
 // Deterministic fallback planner
 // =========================================================
 
-function deterministicPlan(
+export function deterministicPlan(
   message,
   schema
 ) {
@@ -845,6 +863,14 @@ User question:
 ${message}
 `;
 
+
+  const openai = getOpenAIClient();
+
+  if (!openai) {
+    throw new Error(
+      "OPENAI_API_KEY is not configured."
+    );
+  }
 
   const response =
     await openai.responses.create({

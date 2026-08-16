@@ -14,6 +14,7 @@ import aiRoutes from "./routes/aiRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import whatIfRoutes from "./routes/whatIfRoutes.js";
+import connectorRoutes from "./routes/connectorRoutes.js";
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use(
 );
 app.use("/api/chat", chatRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/connectors", connectorRoutes);
 
 app.use(errorHandler);
 

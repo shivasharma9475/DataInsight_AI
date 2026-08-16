@@ -165,4 +165,12 @@ export const whatIfApi = {
     api.post("/api/what-if", payload),
 };
 
+export const connectorApi = {
+  test: (payload) =>
+    api.post("/api/connectors/test", payload),
+
+  import: (payload) =>
+    api.post("/api/connectors/import", payload),
+};
+
 export default api;

@@ -6,6 +6,7 @@ import {
   Brain,
   FileDown,
   Upload as UploadIcon,
+  Plug,
   LogOut,
   Sparkles,
   SearchCode,
@@ -74,10 +75,22 @@ export default function Sidebar() {
 
       <Link
         to="/upload"
-        className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg mb-4 bg-brand-600/20 text-brand-300 hover:bg-brand-600/30 transition"
+        className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg mb-2 bg-brand-600/20 text-brand-300 hover:bg-brand-600/30 transition"
       >
         <UploadIcon size={16} />
         New Upload
+      </Link>
+
+      <Link
+        to="/connectors"
+        className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg mb-4 transition ${
+          location.pathname === "/connectors"
+            ? "bg-slate-800 text-white"
+            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+        }`}
+      >
+        <Plug size={16} />
+        Connect Data
       </Link>
 
       <nav className="flex flex-col gap-1">

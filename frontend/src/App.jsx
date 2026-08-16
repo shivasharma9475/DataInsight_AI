@@ -6,6 +6,7 @@ import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Upload from "./pages/Upload.jsx";
+import Connectors from "./pages/Connectors.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Chat from "./pages/Chat.jsx";
 import MLStudio from "./pages/MLStudio.jsx";
@@ -44,6 +45,15 @@ export default function App() {
         element={
           <ProtectedLayout>
             <Upload />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/connectors"
+        element={
+          <ProtectedLayout>
+            <Connectors />
           </ProtectedLayout>
         }
       />

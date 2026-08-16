@@ -11,6 +11,9 @@ import {
   Bot,
   User,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
+  ListChecks,
 } from "lucide-react";
 
 import { chatApi, datasetApi } from "../services/api.js";
@@ -60,6 +63,75 @@ function buildSuggestions(profile) {
 
 
 // =========================================================
+// Collapsible "analysis steps" disclosure
+//
+// Collapsed by default -- default single-tool answers look
+// exactly as before. Only appears when there's something to
+// show (at least one step or warning).
+// =========================================================
+
+function AnalysisSteps({ steps = [], evidence = [], warnings = [] }) {
+  const [open, setOpen] = useState(false);
+
+  if (steps.length === 0 && warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1.5 max-w-[80%]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition"
+      >
+        <ListChecks size={12} />
+        {open ? "Hide analysis steps" : "Show analysis steps"}
+        {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+      </button>
+
+      {open && (
+        <div className="mt-2 rounded-xl bg-slate-900/60 border border-slate-800 p-3 text-xs text-slate-400 space-y-2">
+          {steps.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {steps.map((s, i) => (
+                <span
+                  key={`${s.tool}-${i}`}
+                  className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300"
+                >
+                  {i + 1}. {s.tool}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {evidence.length > 0 && (
+            <div className="space-y-1.5">
+              {evidence.map((e, i) => (
+                <div key={`${e.tool}-${i}`}>
+                  <span className="text-slate-500">{e.tool}:</span>{" "}
+                  <span className="text-slate-400">
+                    {JSON.stringify(e.result_summary)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {warnings.length > 0 && (
+            <div className="pt-1 border-t border-slate-800 text-amber-400/80">
+              {warnings.map((w, i) => (
+                <div key={i}>{w}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// =========================================================
 // Chat
 // =========================================================
 
@@ -98,7 +170,13 @@ export default function Chat() {
 
       const hist = historyRes.data.flatMap((h) => [
         { role: "user", text: h.message },
-        { role: "assistant", text: h.answer },
+        {
+          role: "assistant",
+          text: h.answer,
+          steps: h.steps || [],
+          evidence: h.evidence || [],
+          warnings: h.warnings || [],
+        },
       ]);
 
       setMessages(hist);
@@ -168,6 +246,9 @@ export default function Chat() {
         {
           role: "assistant",
           text: answer,
+          steps: response.data?.steps || [],
+          evidence: response.data?.evidence || [],
+          warnings: response.data?.warnings || [],
         },
       ]);
 
@@ -300,14 +381,24 @@ export default function Chat() {
 
                 {/* Message */}
 
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                    message.role === "user"
-                      ? "bg-brand-600 text-white"
-                      : "bg-slate-800 text-slate-200"
-                  }`}
-                >
-                  {message.text}
+                <div className="flex flex-col">
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                      message.role === "user"
+                        ? "bg-brand-600 text-white"
+                        : "bg-slate-800 text-slate-200"
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+
+                  {message.role === "assistant" && (
+                    <AnalysisSteps
+                      steps={message.steps}
+                      evidence={message.evidence}
+                      warnings={message.warnings}
+                    />
+                  )}
                 </div>
 
               </div>

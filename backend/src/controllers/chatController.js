@@ -1,387 +1,7 @@
 import mlClient from "../services/mlClient.js";
 import { getOwnedDataset } from "./datasetController.js";
-import { planCopilotQuestion } from "../services/copilotPlanner.js";
+import { runAgent } from "../services/agent/agentOrchestrator.js";
 import ChatMessage from "../models/ChatMessage.js";
-
-
-// =========================================================
-// Helpers
-// =========================================================
-
-function formatNumber(value) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    return String(value);
-  }
-
-  return number.toLocaleString("en-US", {
-    maximumFractionDigits: 2,
-  });
-}
-
-
-// =========================================================
-// Deterministic answer formatter
-//
-// IMPORTANT:
-//
-// OpenAI is used in copilotPlanner.js ONLY to understand
-// the user's question and generate a safe analytics plan.
-//
-// Actual calculations happen in the ML service.
-//
-// This formatter converts the verified ML result into
-// readable text without making another OpenAI request.
-// =========================================================
-
-function formatCopilotAnswer(plan, result) {
-  if (!result) {
-    return "The analysis completed, but no result was returned.";
-  }
-
-  switch (plan.tool) {
-
-    // =====================================================
-    // Aggregate
-    // =====================================================
-
-    case "aggregate": {
-      const metric =
-        result.metric ||
-        plan.arguments.metric_column;
-
-      const aggregation =
-        result.aggregation ||
-        plan.arguments.aggregation;
-
-      const value = result.value;
-
-      if (
-        value === null ||
-        value === undefined
-      ) {
-        return `No valid ${metric} value was available for this calculation.`;
-      }
-
-      const labels = {
-        sum: "Total",
-        mean: "Average",
-        min: "Minimum",
-        max: "Maximum",
-        count: "Count",
-      };
-
-      return `${
-        labels[aggregation] ||
-        aggregation
-      } ${metric}: ${formatNumber(value)}`;
-    }
-
-
-    // =====================================================
-    // Dataset Summary
-    // =====================================================
-
-    case "dataset_summary": {
-      const rows =
-        result.rows ??
-        result.row_count ??
-        result.total_rows ??
-        result.valid_rows;
-
-      const columns =
-        result.columns ??
-        result.column_count ??
-        result.total_columns;
-
-      const parts = [];
-
-      if (
-        rows !== undefined &&
-        rows !== null
-      ) {
-        parts.push(
-          `${formatNumber(rows)} rows`
-        );
-      }
-
-      if (Array.isArray(columns)) {
-        parts.push(
-          `${columns.length} columns`
-        );
-      } else if (
-        columns !== undefined &&
-        columns !== null
-      ) {
-        parts.push(
-          `${formatNumber(columns)} columns`
-        );
-      }
-
-      if (parts.length > 0) {
-        return `Dataset summary: ${parts.join(", ")}.`;
-      }
-
-      return `Dataset summary: ${JSON.stringify(result)}`;
-    }
-
-
-    // =====================================================
-    // Group By
-    // =====================================================
-
-    case "group_by": {
-      const metric =
-        result.metric ||
-        plan.arguments.metric_column;
-
-      const dimension =
-        result.dimension ||
-        result.dimension_column ||
-        plan.arguments.dimension_column;
-
-      const aggregation =
-        result.aggregation ||
-        plan.arguments.aggregation;
-
-      const rows =
-        result.data ||
-        result.results ||
-        result.groups ||
-        result.values;
-
-      if (
-        Array.isArray(rows) &&
-        rows.length > 0
-      ) {
-        const preview = rows
-          .slice(0, 10)
-          .map((item) => {
-            const label =
-              item[dimension] ??
-              item.dimension_value ??
-              item.group ??
-              item.name ??
-              item.label ??
-              "Unknown";
-
-            const value =
-              item.result ??
-              item.metric_value ??
-              item[metric] ??
-              item.total ??
-              item.aggregated_value ??
-              item.value;
-
-            return `${label}: ${formatNumber(value)}`;
-          })
-          .join(", ");
-
-        return `${
-          aggregation || "sum"
-        } ${metric} by ${dimension}: ${preview}`;
-      }
-
-      return `${
-        aggregation || "sum"
-      } ${metric} by ${dimension}: ${JSON.stringify(result)}`;
-    }
-
-
-    // =====================================================
-    // Trend
-    // =====================================================
-
-    case "trend": {
-      const metric =
-        result.metric ||
-        plan.arguments.metric_column;
-
-      const period =
-        result.period ||
-        plan.arguments.period;
-
-      const periodLabels = {
-        D: "Daily",
-        W: "Weekly",
-        M: "Monthly",
-        Q: "Quarterly",
-        Y: "Yearly",
-      };
-
-      const points =
-        result.data ||
-        result.results ||
-        result.points ||
-        result.trend ||
-        result.values;
-
-      if (
-        Array.isArray(points) &&
-        points.length > 0
-      ) {
-        const preview = points
-          .slice(-10)
-          .map((item) => {
-            const label =
-              item.period ??
-              item.date ??
-              item.label ??
-              item.time;
-
-            const value =
-              item.value ??
-              item.result ??
-              item.metric_value ??
-              item[metric] ??
-              item.total;
-
-            return `${label}: ${formatNumber(value)}`;
-          })
-          .join(", ");
-
-        return `${
-          periodLabels[period] ||
-          period ||
-          "Time"
-        } ${metric} trend: ${preview}`;
-      }
-
-      return `${
-        periodLabels[period] ||
-        period ||
-        "Time"
-      } ${metric} trend: ${JSON.stringify(result)}`;
-    }
-
-
-    // =====================================================
-    // Root Cause Analysis
-    // =====================================================
-
-    case "root_cause": {
-      const metric =
-        result.metric ||
-        plan.arguments.metric_column;
-
-      const comparison =
-        result.comparison || {};
-
-      const direction =
-        comparison.direction ||
-        "changed";
-
-      const percentage =
-        comparison.percentage_change;
-
-      const absoluteChange =
-        comparison.absolute_change;
-
-      const previousPeriod =
-        comparison.previous_period;
-
-      const currentPeriod =
-        comparison.current_period;
-
-      const contributors =
-        result.top_contributors || [];
-
-      let answer = "";
-
-      // Period comparison
-      if (
-        previousPeriod &&
-        currentPeriod
-      ) {
-        answer += `${metric} from ${previousPeriod} to ${currentPeriod} `;
-      } else {
-        answer += `${metric} `;
-      }
-
-      // Direction
-      if (direction === "increase") {
-        answer += "increased";
-      } else if (direction === "decrease") {
-        answer += "decreased";
-      } else if (direction === "no_change") {
-        answer += "did not change";
-      } else {
-        answer += "changed";
-      }
-
-      // Percentage
-      if (
-        percentage !== null &&
-        percentage !== undefined
-      ) {
-        answer += ` by ${Math.abs(
-          Number(percentage)
-        ).toFixed(2)}%`;
-      }
-
-      // Absolute change
-      if (
-        absoluteChange !== null &&
-        absoluteChange !== undefined
-      ) {
-        answer += ` (${formatNumber(
-          absoluteChange
-        )})`;
-      }
-
-      answer += ".";
-
-      // Top contributors
-      if (contributors.length > 0) {
-        const topContributors =
-          contributors.slice(0, 3);
-
-        const contributorText =
-          topContributors
-            .map((item) => {
-              const dimension =
-                item.dimension ||
-                "segment";
-
-              const value =
-                item.value ||
-                "Unknown";
-
-              const change =
-                item.change;
-
-              return `${dimension} ${value}: ${
-                Number(change) >= 0
-                  ? "+"
-                  : ""
-              }${formatNumber(change)}`;
-            })
-            .join(", ");
-
-        answer += ` Main contributors: ${contributorText}.`;
-      }
-
-      // Comparable-window warning
-      const warning =
-        result.analysis_quality?.warning;
-
-      if (warning) {
-        answer += ` ${warning}`;
-      }
-
-      return answer;
-    }
-
-
-    // =====================================================
-    // Unknown tool
-    // =====================================================
-
-    default:
-      return JSON.stringify(result);
-  }
-}
 
 
 // =========================================================
@@ -425,7 +45,8 @@ export async function ask(
 
 
     // =====================================================
-    // 2. Security / ownership
+    // 2. Security / ownership -- checked BEFORE any agent
+    // execution, exactly as before.
     // =====================================================
 
     const doc =
@@ -448,26 +69,32 @@ export async function ask(
 
 
     // =====================================================
-    // 4. Natural language -> analytics plan
+    // 4. Run the Agentic Copilot
     //
-    // PRIMARY:
-    // OpenAI planner
+    // Controlled multi-step loop: plan -> execute (strict
+    // schema-validated, allowlisted tools only) -> observe ->
+    // decide whether another tool is needed -> synthesize.
     //
-    // FALLBACK:
-    // deterministic planner
+    // OpenAI is used only for planning/synthesis, never for
+    // calculation -- every number in the final answer traces
+    // back to a deterministic tool result in `state.evidence`.
     //
-    // This logic lives inside copilotPlanner.js.
+    // `doc` (the Mongo Dataset doc, already ownership-checked)
+    // is passed through so the data_source_info tool can read
+    // its already-sanitized sourceType/sourceMetadata without
+    // any additional network call or credential exposure.
     // =====================================================
 
-    let plan;
+    let state;
 
     try {
 
-      plan =
-        await planCopilotQuestion({
-          message: message.trim(),
-          profile,
-        });
+      state = await runAgent({
+        dataset_id,
+        message: message.trim(),
+        profile,
+        datasetDoc: doc,
+      });
 
     } catch (error) {
 
@@ -486,7 +113,7 @@ export async function ask(
           code: "UNSUPPORTED_QUERY",
 
           message:
-            "I couldn't understand that analysis request. Try asking about totals, averages, category breakdowns, trends, or why a metric changed.",
+            "I couldn't understand that analysis request. Try asking about totals, averages, category breakdowns, trends, why a metric changed, what-if scenarios, forecasts, or model training.",
         });
 
       }
@@ -496,71 +123,7 @@ export async function ask(
 
 
     // =====================================================
-    // 5. Execute verified calculation
-    //
-    // OpenAI does NOT calculate dataset values.
-    //
-    // Python ML service performs the calculation.
-    // =====================================================
-
-    const { data: execution } =
-      await mlClient.post(
-        "/copilot/query",
-        {
-          dataset_id,
-
-          tool:
-            plan.tool,
-
-          arguments:
-            plan.arguments,
-        }
-      );
-
-
-    // Support both:
-    //
-    // {
-    //   tool: "...",
-    //   result: {...}
-    // }
-    //
-    // and direct result responses.
-
-    const result =
-      execution?.result ??
-      execution;
-
-
-    // =====================================================
-    // 6. Format verified result LOCALLY
-    //
-    // IMPORTANT:
-    //
-    // NO second OpenAI call here.
-    //
-    // Therefore:
-    //
-    // User question
-    //      ↓
-    // OpenAI planner      = 1 call
-    //      ↓
-    // ML service
-    //      ↓
-    // Local formatter
-    //
-    // Maximum one OpenAI request per Copilot question.
-    // =====================================================
-
-    const answer =
-      formatCopilotAnswer(
-        plan,
-        result
-      );
-
-
-    // =====================================================
-    // 7. Save chat history
+    // 5. Save chat history (additive fields only)
     // =====================================================
 
     await ChatMessage.create({
@@ -573,35 +136,70 @@ export async function ask(
       message:
         message.trim(),
 
-      answer,
+      answer:
+        state.final_answer,
+
+      steps:
+        state.plan_history,
+
+      evidence:
+        state.evidence,
+
+      warnings:
+        state.warnings,
     });
 
 
     // =====================================================
-    // 8. Return answer + evidence
+    // 6. Return answer + evidence
+    //
+    // Response shape is ADDITIVE over the previous single-tool
+    // response: `answer`, `data`, `ai_enhanced`, and
+    // `copilot:{planner, tool, arguments}` all still exist
+    // (now describing the LAST executed step, so any existing
+    // consumer reading a single tool/arguments pair still gets
+    // a sensible value). `steps`, `evidence`, `assumptions`,
+    // and `warnings` are new.
     // =====================================================
 
+    const lastStep =
+      state.plan_history[state.plan_history.length - 1];
+
+    const lastEvidence =
+      state.evidence[state.evidence.length - 1];
+
     return res.json({
-      answer,
+      answer:
+        state.final_answer,
 
       data:
-        result,
+        lastEvidence?.result_summary ?? null,
 
-      // Answer itself was not generated by OpenAI.
       ai_enhanced:
-        false,
+        state.ai_used,
 
       copilot: {
         planner:
-          plan.planner ||
-          "unknown",
+          lastStep?.planner || "unknown",
 
         tool:
-          plan.tool,
+          lastStep?.tool || null,
 
         arguments:
-          plan.arguments,
+          lastStep?.arguments || null,
       },
+
+      steps:
+        state.plan_history,
+
+      evidence:
+        state.evidence,
+
+      assumptions:
+        state.assumptions,
+
+      warnings:
+        state.warnings,
     });
 
   } catch (err) {
@@ -668,6 +266,15 @@ export async function history(
 
         timestamp:
           m.createdAt,
+
+        steps:
+          m.steps || [],
+
+        evidence:
+          m.evidence || [],
+
+        warnings:
+          m.warnings || [],
       }))
     );
 

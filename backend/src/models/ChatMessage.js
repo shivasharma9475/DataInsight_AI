@@ -6,6 +6,13 @@ const chatMessageSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     message: { type: String, required: true },
     answer: { type: String, required: true },
+
+    // Additive, optional -- populated by the Agentic Copilot. Older
+    // messages (or any future non-agent path) simply won't have these
+    // fields, and history rendering falls back to message/answer only.
+    steps: { type: [mongoose.Schema.Types.Mixed], default: undefined },
+    evidence: { type: [mongoose.Schema.Types.Mixed], default: undefined },
+    warnings: { type: [String], default: undefined },
   },
   { timestamps: true }
 );

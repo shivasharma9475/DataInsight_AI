@@ -5,7 +5,23 @@ from app.services.data_processing import (
     profile_dataframe,
     clean_dataframe,
     detect_outliers_iqr,
+    load_dataframe,
 )
+
+
+def test_load_dataframe_rejects_non_uuid_dataset_id():
+    """
+    dataset_id always originates from uuid.uuid4() at ingest time. Any
+    caller passing a non-UUID value (e.g. a path-traversal payload like
+    "../../etc/passwd") must get a clean "not found" instead of the id
+    being used to build a filesystem path.
+    """
+    for malicious_id in ["../../etc/passwd", "..", "a/b", "a\\b", ""]:
+        try:
+            load_dataframe(malicious_id)
+            assert False, f"expected FileNotFoundError for {malicious_id!r}"
+        except FileNotFoundError:
+            pass
 
 
 def test_profile_dataframe_counts_rows_columns_and_duplicates():

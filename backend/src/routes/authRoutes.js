@@ -24,9 +24,9 @@ router.post(
   authController.login
 );
 
-router.post("/google", authController.googleLogin);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password", authController.resetPassword);
+router.post("/google", authLimiter, authController.googleLogin);
+router.post("/forgot-password", authLimiter, authController.forgotPassword);
+router.post("/reset-password", authLimiter, authController.resetPassword);
 router.get("/me", requireAuth, authController.me);
 
 export default router;

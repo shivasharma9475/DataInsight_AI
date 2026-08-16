@@ -5,7 +5,6 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.config import INTERNAL_API_KEY
 from app.services import data_processing as dp
 from app.services.what_if_engine import (
     WhatIfError,
@@ -14,6 +13,7 @@ from app.services.what_if_engine import (
 from app.services.what_if_planner import (
     plan_what_if,
 )
+from app.core.security import require_internal_key
 
 
 router = APIRouter()
@@ -44,16 +44,10 @@ class WhatIfRequest(BaseModel):
 
 # =========================================================
 # Internal API Authentication
+#
+# NOTE: require_internal_key now lives in app.core.security so both this
+# router and app/main.py share a single, timing-safe implementation.
 # =========================================================
-
-async def require_internal_key(
-    x_internal_key: str = Header(default="")
-):
-    if x_internal_key != INTERNAL_API_KEY:
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden: invalid or missing internal key",
-        )
 
 
 # =========================================================
@@ -137,9 +131,12 @@ async def what_if(
 
         if payload.question:
 
+            profile = dp.profile_dataframe(df)
+
             plan = plan_what_if(
                 message=payload.question,
                 df=df,
+                profile=profile,
             )
 
             result = run_what_if(

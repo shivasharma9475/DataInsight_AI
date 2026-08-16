@@ -9,11 +9,14 @@ web-facing app, Python owns the heavy data/ML work.
 """
 import os
 import io
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
+import re
+import uuid
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from app.services.recommendation_engine import generate_recommendations
 
-from app.core.config import settings, INTERNAL_API_KEY
+from app.core.config import settings
+from app.core.security import require_internal_key
 from app.services import data_processing as dp
 from app.services import ml_engine
 from app.services import ai_engine
@@ -23,15 +26,12 @@ from app.services import (
     copilot_engine,
 )
 from app.what_if import router as what_if_router
+from app.connectors import router as connectors_router
 
 app = FastAPI(title="DataInsight AI — ML Service (internal)")
 
 app.include_router(what_if_router)
-
-
-async def require_internal_key(x_internal_key: str = Header(default="")):
-    if x_internal_key != INTERNAL_API_KEY:
-        raise HTTPException(status_code=403, detail="Forbidden: invalid or missing internal key")
+app.include_router(connectors_router)
 
 
 @app.get("/health")
@@ -41,12 +41,21 @@ async def health():
 
 @app.post("/ingest", dependencies=[Depends(require_internal_key)])
 async def ingest(file: UploadFile = File(...)):
-    tmp_path = os.path.join(settings.UPLOAD_DIR, f"_tmp_{file.filename}")
+    # Minimal, targeted fix: use only the basename and strip anything that
+    # isn't a safe filename character before building the temp path, so a
+    # crafted filename (e.g. "../../etc/passwd") can never escape
+    # UPLOAD_DIR. Node already sanitizes the filename it sends, but this
+    # service shouldn't rely solely on that -- it's the same principle
+    # already applied to dataset_id in data_processing._dataset_dir.
+    raw_name = os.path.basename(file.filename or "upload")
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", raw_name) or "upload"
+
+    tmp_path = os.path.join(settings.UPLOAD_DIR, f"_tmp_{uuid.uuid4().hex}_{safe_name}")
     content = await file.read()
     with open(tmp_path, "wb") as f:
         f.write(content)
     try:
-        dataset_id, df, profile = dp.ingest_file(tmp_path, file.filename)
+        dataset_id, df, profile = dp.ingest_file(tmp_path, safe_name)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
@@ -151,8 +160,13 @@ async def ml_run(payload: dict):
         raise HTTPException(400, f"Unknown task '{task}'")
     except HTTPException:
         raise
+    except ml_engine.MLEngineError as e:
+        # User-facing validation error (bad target, not enough rows, no
+        # usable features, etc.) -- message is already safe to show as-is.
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Model run failed: {e}")
+        print("[ML RUN ERROR]", type(e).__name__, str(e))
+        raise HTTPException(status_code=400, detail="Model run failed. Please check your column selections.")
 
 
 @app.get("/ai/{dataset_id}/insights", dependencies=[Depends(require_internal_key)])

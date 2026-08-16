@@ -9,6 +9,7 @@ Mongo, cleaned/raw dataframes are cached to disk as parquet under
 UPLOAD_DIR/<dataset_id>/ and only lightweight metadata is stored in Mongo.
 """
 import os
+import re
 import uuid
 import json
 from datetime import datetime
@@ -21,8 +22,20 @@ from app.core.config import settings
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
+# dataset_id is always generated server-side via uuid.uuid4() at ingest time
+# (see ingest_file below). We validate the format defensively wherever a
+# dataset_id arrives as a path parameter from a caller, so a malformed or
+# maliciously crafted id (e.g. containing "../") can never be used to build
+# a filesystem path outside UPLOAD_DIR.
+_DATASET_ID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
 
 def _dataset_dir(dataset_id: str) -> str:
+    if not isinstance(dataset_id, str) or not _DATASET_ID_RE.match(dataset_id):
+        raise FileNotFoundError(f"Invalid dataset id: {dataset_id!r}")
+
     path = os.path.join(settings.UPLOAD_DIR, dataset_id)
     os.makedirs(path, exist_ok=True)
     return path
@@ -129,15 +142,21 @@ def profile_dataframe(df: pd.DataFrame) -> dict:
     }
 
 
-def ingest_file(file_path: str, filename: str) -> tuple[str, pd.DataFrame, dict]:
-    """Read an uploaded CSV/XLSX, coerce likely datetime columns, cache to parquet."""
-    ext = filename.lower().split(".")[-1]
-    if ext == "csv":
-        df = pd.read_csv(file_path)
-    elif ext in ("xlsx", "xls"):
-        df = pd.read_excel(file_path)
-    else:
-        raise ValueError("Unsupported file type. Please upload a .csv or .xlsx file.")
+def ingest_dataframe(df: pd.DataFrame, source_label: str) -> tuple[str, pd.DataFrame, dict]:
+    """
+    Normalize and persist any already-loaded DataFrame as a new dataset,
+    regardless of where it came from (file upload, REST API, a SQL table,
+    a Google Sheet, ...).
+
+    This is the single choke point every ingestion path funnels through,
+    so EDA/cleaning/ML/RCA/what-if/forecasting/copilot never need to know
+    or care about the dataset's origin -- they only ever see a dataset_id.
+
+    `source_label` is only used for error messages/logging; it never
+    touches the filesystem path (dataset_id, minted below, does that).
+    """
+    if df is None or df.empty:
+        raise ValueError(f"'{source_label}' produced no rows to import.")
 
     # Best-effort datetime coercion for object columns that look like dates
     for col in df.columns:
@@ -151,6 +170,19 @@ def ingest_file(file_path: str, filename: str) -> tuple[str, pd.DataFrame, dict]
     save_dataframe(dataset_id, df, cleaned=False)
     profile = profile_dataframe(df)
     return dataset_id, df, profile
+
+
+def ingest_file(file_path: str, filename: str) -> tuple[str, pd.DataFrame, dict]:
+    """Read an uploaded CSV/XLSX and hand it off to ingest_dataframe."""
+    ext = filename.lower().split(".")[-1]
+    if ext == "csv":
+        df = pd.read_csv(file_path)
+    elif ext in ("xlsx", "xls"):
+        df = pd.read_excel(file_path)
+    else:
+        raise ValueError("Unsupported file type. Please upload a .csv or .xlsx file.")
+
+    return ingest_dataframe(df, source_label=filename)
 
 
 # ---------------------- Cleaning ----------------------

@@ -5,8 +5,6 @@ import os
 import re
 from typing import Any, Dict, Optional
 
-from openai import OpenAI
-
 
 def _clean_column_name(
     value: str,
@@ -234,6 +232,9 @@ def deterministic_plan(
             ) == "object"
         ]
 
+    # Pass 1 (preferred, most precise): both the dimension column
+    # name AND one of its values appear in the text, e.g.
+    # "West region sales increase by 20%".
     for dimension in sorted(
         categorical_columns,
         key=len,
@@ -256,6 +257,46 @@ def deterministic_plan(
 
         if dimension_column:
             break
+
+    # Pass 2 (fallback): the dimension column name is often omitted
+    # in natural phrasing -- "What if West sales increase by 15%?"
+    # never says "region". Scan every categorical column's actual
+    # values for a mention, preferring the longest matching value
+    # (e.g. "New York" over a coincidental shorter substring) so a
+    # segment is still recognized without requiring the dimension
+    # name to be spelled out.
+    if not dimension_column:
+        best_match = None  # (dimension, value, matched_length)
+
+        for dimension in categorical_columns:
+            unique_values = (
+                df[dimension]
+                .dropna()
+                .unique()
+            )
+
+            for value in unique_values:
+                value_text = str(value).lower()
+
+                if not value_text:
+                    continue
+
+                if re.search(
+                    r"\b" + re.escape(value_text) + r"\b",
+                    lowered,
+                ):
+                    if (
+                        best_match is None
+                        or len(value_text) > best_match[2]
+                    ):
+                        best_match = (
+                            dimension,
+                            value,
+                            len(value_text),
+                        )
+
+        if best_match:
+            dimension_column, segment_value, _ = best_match
 
     # -----------------------------------------------------
     # Return structured plan
@@ -290,6 +331,13 @@ def _openai_plan(
         raise RuntimeError(
             "OPENAI_API_KEY is not configured."
         )
+
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError(
+            "openai package is not installed."
+        ) from exc
 
     client = OpenAI(
         api_key=api_key
