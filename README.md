@@ -1,129 +1,264 @@
-# DataInsight AI (MERN + Python ML microservice)
+# 📊 DataInsight AI
 
-**Upload Any Dataset. Get Instant AI-Powered Insights.**
+> **AI-powered data analytics platform for uploading, cleaning, exploring, visualizing, and analyzing datasets — all from one dashboard.**
 
-This is the MERN-stack rebuild of DataInsight AI, using the same architecture pattern as **InventoryPro**: a Node/Express/MongoDB web app, with a small internal Python service handling the data-science work that Node's ecosystem isn't built for.
+DataInsight AI is a full-stack analytics platform designed to simplify the complete data analysis workflow.
 
----
+Users can upload datasets and use an interactive dashboard to:
 
-## Architecture
-
-```
-┌─────────────┐      ┌──────────────────┐      ┌────────────────────┐
-│   React     │ ───▶ │  Node / Express   │ ───▶ │  Python ML Service │
-│  (frontend) │ ◀─── │  (backend, :5000) │ ◀─── │  (internal, :8001) │
-└─────────────┘      └────────┬──────────┘      └────────────────────┘
-                               │
-                               ▼
-                         ┌──────────┐
-                         │ MongoDB  │
-                         └──────────┘
-```
-
-- **Frontend** (React/Vite/Tailwind) — talks only to the Node backend. Unchanged UI/UX from the original build.
-- **Backend** (Node/Express/Mongoose) — the public-facing app. Owns **auth** (JWT, bcrypt, optional Google OAuth), **users and dataset ownership** (MongoDB), **file upload handling**, **chat history**, and the **optional OpenAI enhancement layer**. It never does data science itself — it forwards those requests to the ML service.
-- **ML Service** (Python/FastAPI) — **internal only**, not reachable from the browser. Handles schema detection, cleaning, EDA, outlier detection, chart data, AutoML (classification/regression/clustering/forecasting), local AI insight/chat generation, and PDF/Excel report generation. Protected by a shared-secret header (`x-internal-key`) that only the Node backend knows.
-- **MongoDB** — stores users, dataset ownership/metadata, and chat history. The actual dataset content is cached as Parquet files inside the ML service (`ml-service/uploads/<dataset_id>/`), not in Mongo — keeps things fast without needing a data warehouse.
-
-### Why not pure Node for the ML parts?
-
-Node doesn't have an equivalent to pandas/scikit-learn/statsmodels mature enough for real EDA, AutoML, and forecasting. Splitting the data-science workload into its own internal Python service — rather than forcing it into JS — is a standard pattern for exactly this reason, and it's the same choice already made in InventoryPro's demand-forecasting microservice.
+- 📁 Upload CSV / Excel datasets
+- 🔎 Search uploaded datasets
+- 📋 Preview dataset records
+- 🧹 Clean datasets
+- 📊 Perform Exploratory Data Analysis (EDA)
+- 📈 Generate interactive charts
+- 🧮 Analyze correlations
+- 🚨 Detect outliers
+- 🤖 Generate AI-powered insights
+- 🎯 Perform Root Cause Analysis
+- 🧠 Train Machine Learning models
+- 💡 Get AI recommendations
+- 🔮 Perform What-If analysis
+- 📄 Generate analytical reports
+- 🔌 Connect external data sources
 
 ---
 
-## Quick start (Docker — recommended)
+# 🚀 Features
 
-```bash
-cp backend/.env.example backend/.env
-cp ml-service/.env.example ml-service/.env
-# Make sure INTERNAL_API_KEY matches in both .env files — this is the shared
-# secret the Node backend uses to call the ML service.
+## 📁 Dataset Upload
 
-docker compose up --build
-```
+Upload datasets directly from the frontend.
 
-- Frontend: http://localhost:5173
-- Node API: http://localhost:5000
-- ML service (internal, for debugging only): http://localhost:8001/docs
+Supported formats:
 
-Upload `sample_data/sales_sample.csv` after signing up to see every feature in action.
+- CSV
+- XLS
+- XLSX
+
+The frontend sends the dataset to the Node.js backend, which forwards it to the Python ML service for processing.
 
 ---
 
-## Quick start (manual / no Docker)
+## 📊 Analytics Dashboard
 
-### 1. MongoDB
-```bash
-docker run -d -p 27017:27017 mongo:7
-```
-(or install locally, or use MongoDB Atlas)
+After uploading a dataset, users get a centralized analytics dashboard containing:
 
-### 2. ML service (Python)
-```bash
-cd ml-service
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn app.main:app --reload --port 8001
-```
-
-### 3. Backend (Node)
-```bash
-cd backend
-npm install
-cp .env.example .env
-# make sure INTERNAL_API_KEY matches ml-service/.env
-npm run dev
-```
-
-### 4. Frontend
-```bash
-cd frontend
-npm install
-cp .env.example .env             # VITE_API_URL=http://localhost:5000
-npm run dev
-```
-
-Visit http://localhost:5173.
+- Dataset statistics
+- Row and column counts
+- Missing-value analysis
+- Duplicate-row analysis
+- Column profiling
+- Outlier information
+- Distribution analysis
+- Correlation analysis
+- Interactive charts
+- AI-generated insights
 
 ---
 
-## Project structure
+## 🔎 Dataset Search
 
-```
-datainsight-mern/
-├── backend/                     # Node/Express — public-facing app
-│   ├── src/
-│   │   ├── config/               # env, MongoDB connection
-│   │   ├── models/                # User, Dataset, ChatMessage (Mongoose)
-│   │   ├── middleware/            # JWT auth, error handler
-│   │   ├── controllers/           # auth, datasets, ml, ai, chat, reports
-│   │   ├── routes/
-│   │   └── services/              # mlClient (calls ML service), aiEnhancer (OpenAI)
-│   └── server.js
-├── ml-service/                  # Python/FastAPI — internal data science service
-│   └── app/
-│       ├── services/               # data_processing, ml_engine, ai_engine, report_engine
-│       └── main.py
-├── frontend/                    # React/Vite/Tailwind — unchanged
-├── sample_data/sales_sample.csv
-└── docker-compose.yml
-```
+DataInsight AI includes a global dataset search.
 
-## API contract
+Currently searchable dataset information includes:
 
-The Node backend exposes the **same `/api/...` routes** as the original all-Python version (auth, datasets, ml, ai, chat, reports) — the frontend didn't need route-level changes, only its `VITE_API_URL` default port (5000 instead of 8000).
+- Filename
+- Source table
+- Database
+- Schema
+- Resource
 
-## What was actually tested
+Search results directly navigate to the selected dataset dashboard.
 
-- The ML service was tested with **live HTTP requests** end-to-end: ingest → clean → EDA → run a regression model → chat query → AI insights → PDF report generation. All passed against a real 500-row sample dataset.
-- The Node backend passes `node --check` on every file and its full import/module graph loads without error (verified by running the server against an intentionally unreachable Mongo URI — it fails only at the DB-connection step, which is the expected failure point in a sandbox with no MongoDB available).
-- **Not verified in this environment:** a full browser click-through (signup → upload → dashboard) against the live Node backend, since no MongoDB instance was available here to connect to. The controller logic is a close, direct mirror of the FastAPI version's logic, which *was* fully tested — but treat the first real run as the true first test of the Node↔Mongo↔ML-service wiring, and check the console logs on all three services if something doesn't come back as expected.
+---
 
-## Known scope notes
+## 🧹 Data Cleaning
 
-Same as the original build — this intentionally prioritized the data pipeline (ML service) as the deep, fully-real part:
-- No email-sending integration for password resets (reset link is logged to the Node console — wire up SendGrid/SES for production).
-- Google OAuth works if you supply real credentials in `backend/.env`, but isn't required to use the app.
-- Dataset files are cached to local disk inside the ML service container rather than object storage (S3/GCS) — fine for local/demo use.
+Users can clean datasets from the dashboard.
+
+The cleaning pipeline can be used to process issues such as:
+
+- Missing values
+- Duplicate records
+- Invalid data
+- Data inconsistencies
+
+The cleaned dataset can then be used for further analytics and machine-learning workflows.
+
+---
+
+## 📈 Exploratory Data Analysis
+
+The platform provides automated EDA including:
+
+- Numerical statistics
+- Categorical analysis
+- Missing-value analysis
+- Distribution analysis
+- Correlation analysis
+- Outlier detection
+- Column-level profiling
+
+---
+
+## 📊 Data Visualization
+
+The dashboard supports multiple visualization types, including:
+
+- Histograms
+- Bar charts
+- Line charts
+- Scatter plots
+- Box plots
+- Correlation heatmaps
+- Category distributions
+- Trend analysis
+
+Charts are generated from the actual uploaded dataset.
+
+---
+
+## 🤖 AI-Powered Insights
+
+DataInsight AI integrates AI capabilities to help users understand their datasets.
+
+The AI layer can provide:
+
+- Key observations
+- Important trends
+- Potential anomalies
+- Data-quality observations
+- Business-oriented insights
+
+---
+
+## 🎯 Root Cause Analysis
+
+The Root Cause Analysis module helps analyze relationships between variables and identify factors that may contribute to an observed outcome.
+
+The platform includes contribution-style visualizations to make these relationships easier to understand.
+
+---
+
+## 🧠 Machine Learning
+
+The platform includes an ML module for building predictive models from datasets.
+
+The ML workflow is designed to support:
+
+- Feature selection
+- Model training
+- Prediction
+- Model evaluation
+- ML-based insights
+
+The machine-learning functionality is handled by the Python ML service.
+
+---
+
+## 💡 AI Recommendations
+
+DataInsight AI can generate recommendations based on the analysis performed on the dataset.
+
+Recommendations are intended to help users move from:
+
+**Data → Insights → Decisions**
+
+---
+
+## 🔮 What-If Analysis
+
+The What-If module allows users to explore hypothetical changes in data and understand potential outcomes.
+
+This helps users experiment with possible scenarios before making business decisions.
+
+---
+
+## 📄 Reports
+
+The Reports module is designed to provide a consolidated view of analytical results.
+
+Reports can combine:
+
+- Dataset information
+- Key metrics
+- Visualizations
+- Analytical findings
+- AI insights
+
+---
+
+## 🔔 Notifications
+
+The application includes a notification/activity system based on dataset activity.
+
+Examples include:
+
+- Dataset uploaded
+- Dataset cleaned
+
+Notification entries can link directly to the relevant dataset dashboard.
+
+---
+
+## 🔌 Data Connectors
+
+The platform architecture supports multiple dataset sources.
+
+Supported source types in the backend model include:
+
+- Upload
+- REST API
+- MySQL
+- PostgreSQL
+- Google Sheets
+
+---
+
+# 🏗️ System Architecture
+
+DataInsight AI uses a three-layer architecture:
+
+```text
+┌─────────────────────────────┐
+│        Frontend             │
+│     React + Vite            │
+│     Tailwind CSS            │
+└──────────────┬──────────────┘
+               │
+               │ REST API
+               ▼
+┌─────────────────────────────┐
+│        Node.js Backend       │
+│      Express + MongoDB       │
+│                             │
+│ Authentication              │
+│ Dataset APIs                │
+│ Search                      │
+│ Notifications               │
+│ Business Logic              │
+└──────────────┬──────────────┘
+               │
+               │ HTTP
+               ▼
+┌─────────────────────────────┐
+│       Python ML Service      │
+│         FastAPI              │
+│                             │
+│ Data Ingestion              │
+│ Data Cleaning               │
+│ EDA                         │
+│ Visualization Data          │
+│ Outlier Analysis            │
+│ Machine Learning            │
+│ AI / Analytics Processing   │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│      Dataset Storage         │
+│                             │
+│ Local Parquet Files          │
+│ MongoDB Metadata             │
+└─────────────────────────────┘
