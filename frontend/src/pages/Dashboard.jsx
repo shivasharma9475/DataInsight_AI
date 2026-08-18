@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Database, AlertTriangle, Copy, Percent, Sparkles, Wand2, Loader2 } from "lucide-react";
 import { datasetApi, aiApi } from "../services/api.js";
-import { StatCard, Card, Skeleton } from "../components/UI.jsx";
+import { KPICard, Card, Skeleton } from "../components/UI.jsx";
 import {
   HistogramChart, BarCategoryChart, TrendLineChart, ScatterChartCard,
   CorrelationHeatmap, BoxPlotSummary,
@@ -85,19 +85,29 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Rows" value={profile.row_count.toLocaleString()} icon={Database} />
-        <StatCard label="Columns" value={profile.column_count} />
-        <StatCard
-          label="Missing Cells"
-          value={`${profile.missing_pct}%`}
-          sub={`${profile.missing_cells.toLocaleString()} cells`}
-          tone={profile.missing_pct > 5 ? "warn" : "good"}
-        />
-        <StatCard
-          label="Duplicate Rows"
-          value={profile.duplicate_count}
-          tone={profile.duplicate_count > 0 ? "warn" : "good"}
-        />
+        <KPICard
+  label="Rows"
+  value={profile.row_count.toLocaleString()}
+  icon={Database}
+/>
+
+<KPICard
+  label="Columns"
+  value={profile.column_count}
+/>
+
+<KPICard
+  label="Missing Cells"
+  value={`${profile.missing_pct}%`}
+  sub={`${profile.missing_cells.toLocaleString()} cells`}
+  tone={profile.missing_pct > 5 ? "warn" : "good"}
+/>
+
+<KPICard
+  label="Duplicate Rows"
+  value={profile.duplicate_count}
+  tone={profile.duplicate_count > 0 ? "warn" : "good"}
+/>
       </div>
 
       {/* AI Insights */}

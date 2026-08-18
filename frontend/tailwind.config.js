@@ -5,20 +5,32 @@ export default {
   theme: {
     extend: {
       colors: {
+        // "brand" is used everywhere in the app. Kept deep + desaturated so
+        // it works as a hairline/text accent on black, not a filled block.
         brand: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          400: "#818cf8",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          900: "#312e81",
+          50: "#e8f4ef",
+          100: "#c7e6da",
+          200: "#93cdb2",
+          300: "#5fb28c",
+          400: "#3a9670",
+          500: "#227a5a",
+          600: "#175f47",
+          700: "#124a38",
+          800: "#0e3a2c",
+          900: "#0a2b21",
+        },
+        dark: {
+          bg: "#020302",
+          surface: "#080909",
+          card: "#0d0e0e",
+          border: "#191b1a",
         },
       },
       backgroundImage: {
-        "grid-glow": "radial-gradient(circle at top left, rgba(99,102,241,0.25), transparent 40%)",
+        // barely-there — a hint of green light, not a tint over the page
+        "grid-glow": "radial-gradient(circle at top left, rgba(34,122,90,0.07), transparent 45%)",
       },
     },
   },
   plugins: [],
-}
+};

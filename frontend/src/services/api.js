@@ -59,9 +59,14 @@ export const datasetApi = {
       onUploadProgress: onProgress,
     });
   },
+  search: (query) =>
+    api.get(`/api/datasets/search?q=${encodeURIComponent(query)}`),
 
   history: () =>
     api.get("/api/datasets/history"),
+
+  notifications: () =>
+  api.get("/api/datasets/notifications"),
 
   profile: (id) =>
     api.get(`/api/datasets/${id}/profile`),

@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { Card } from "./UI.jsx";
 
-const COLORS = ["#6366f1", "#818cf8", "#a78bfa", "#f472b6", "#fb923c", "#34d399", "#22d3ee", "#facc15"];
+const COLORS = ["#22916c", "#3fae85", "#5eead4", "#f472b6", "#fb923c", "#22d3ee", "#a3e635", "#facc15"];
 
 const tooltipStyle = {
   background: "#0f172a",
@@ -15,6 +15,33 @@ const tooltipStyle = {
   color: "#e2e8f0",
 };
 
+/* Small inline trend line used inside KPI cards. No axes, no fabricated data —
+   pass real historical values in, or omit the `spark` prop on KPICard entirely. */
+export function Sparkline({ values, tone = "default" }) {
+  if (!values || values.length < 2) return null;
+  const strokeByTone = {
+    default: "#64748b",
+    good: "#34d399",
+    warn: "#fbbf24",
+    danger: "#f87171",
+  };
+  const data = values.map((v, i) => ({ i, v }));
+  return (
+    <ResponsiveContainer width="100%" height={28}>
+      <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+        <Line
+          type="monotone"
+          dataKey="v"
+          stroke={strokeByTone[tone] || strokeByTone.default}
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function HistogramChart({ title, bins, counts }) {
   if (!bins || !counts) return null;
   const data = counts.map((c, i) => ({
@@ -22,14 +49,21 @@ export function HistogramChart({ title, bins, counts }) {
     count: c,
   }));
   return (
-    <Card title={title}>
-      <ResponsiveContainer width="100%" height={220}>
+    <Card
+      title={title}
+      action={
+        <span className="text-slate-600" title="Distribution of values across the column's range">
+          ⓘ
+        </span>
+      }
+    >
+      <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
           <XAxis dataKey="range" hide />
-          <YAxis stroke="#64748b" fontSize={11} />
+          <YAxis stroke="#475569" fontSize={10} width={28} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="count" fill="#22916c" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </Card>
@@ -43,11 +77,11 @@ export function BarCategoryChart({ title, labels, values }) {
     <Card title={title}>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} layout="vertical" margin={{ left: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis type="number" stroke="#64748b" fontSize={11} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+          <XAxis type="number" stroke="#475569" fontSize={11} />
           <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={11} width={90} />
-          <Tooltip contentStyle={tooltipStyle} />
-          <Bar dataKey="value" fill="#818cf8" radius={[0, 4, 4, 0]} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#1e293b55" }} />
+          <Bar dataKey="value" fill="#3fae85" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </Card>
@@ -87,7 +121,7 @@ export function TrendLineChart({ title, x, y, xLabel, yLabel, forecastX, forecas
           <XAxis dataKey="x" stroke="#64748b" fontSize={10} minTickGap={30} />
           <YAxis stroke="#64748b" fontSize={11} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Line type="monotone" dataKey="actual" stroke="#6366f1" dot={false} strokeWidth={2} name={yLabel || "Actual"} />
+          <Line type="monotone" dataKey="actual" stroke="#22916c" dot={false} strokeWidth={2} name={yLabel || "Actual"} />
           {forecastX && (
             <Line type="monotone" dataKey="forecast" stroke="#f472b6" strokeDasharray="5 5" dot={false} strokeWidth={2} name="Forecast" />
           )}
@@ -124,34 +158,34 @@ export function ScatterChartCard({ title, x, y, xLabel, yLabel, clusters }) {
   );
 }
 
-export function CorrelationHeatmap({ columns, matrix }) {
+export function CorrelationHeatmap({ columns, matrix, action }) {
   if (!columns || !matrix || columns.length === 0) return null;
   const cellColor = (v) => {
     const intensity = Math.min(Math.abs(v), 1);
     return v >= 0
-      ? `rgba(99, 102, 241, ${intensity})`
+      ? `rgba(34, 145, 108, ${intensity})`
       : `rgba(244, 63, 94, ${intensity})`;
   };
   return (
-    <Card title="Correlation Matrix">
+    <Card title="Correlation Matrix" action={action}>
       <div className="overflow-x-auto">
-        <table className="text-xs border-collapse">
+        <table className="text-xs border-collapse w-full">
           <thead>
             <tr>
               <th className="p-1" />
               {columns.map((c) => (
-                <th key={c} className="p-1 text-slate-400 font-normal whitespace-nowrap px-2">{c}</th>
+                <th key={c} className="p-1 text-slate-500 font-normal whitespace-nowrap px-2">{c}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {matrix.map((row, i) => (
               <tr key={i}>
-                <td className="p-1 text-slate-400 whitespace-nowrap pr-2">{columns[i]}</td>
+                <td className="p-1 text-slate-500 whitespace-nowrap pr-2">{columns[i]}</td>
                 {row.map((v, j) => (
                   <td
                     key={j}
-                    className="p-1 text-center w-12 h-8 text-slate-100"
+                    className="p-1 text-center w-12 h-8 text-slate-100 rounded"
                     style={{ background: cellColor(v) }}
                     title={`${columns[i]} × ${columns[j]}: ${v}`}
                   >
@@ -174,7 +208,7 @@ export function BoxPlotSummary({ title, stats }) {
       <div className="grid grid-cols-5 gap-2 text-center text-xs">
         {Object.entries({ Min: stats.min, Q1: stats.q1, Median: stats.median, Q3: stats.q3, Max: stats.max }).map(
           ([label, val]) => (
-            <div key={label} className="bg-slate-900/60 rounded-lg py-2">
+            <div key={label} className="bg-slate-950/50 border border-slate-800/60 rounded-lg py-2.5">
               <div className="text-slate-500">{label}</div>
               <div className="font-medium text-slate-200 mt-0.5">{Number(val).toFixed(1)}</div>
             </div>

@@ -49,7 +49,9 @@ const router = Router();
 router.use(requireAuth);
 
 router.post("/upload", upload.single("file"), datasetController.upload);
+router.get("/search", datasetController.search);
 router.get("/history", datasetController.history);
+router.get("/notifications", datasetController.notifications);
 router.get("/:datasetId/profile", datasetController.profile);
 router.get("/:datasetId/cleaning-suggestions", datasetController.cleaningSuggestions);
 router.post("/clean", datasetController.clean);

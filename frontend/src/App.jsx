@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 
@@ -14,21 +14,26 @@ import WhatIfSimulator from "./pages/WhatIfSimulator.jsx";
 import Reports from "./pages/Reports.jsx";
 import RootCause from "./pages/RootCause.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
 import Recommendations from "./pages/Recommendations.jsx";
 
 function ProtectedLayout({ children }) {
   const { isAuthenticated } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-950 bg-grid-glow">
-      <Sidebar />
-      <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
-        {children}
-      </main>
+    <div className="flex h-screen bg-[#050606] bg-grid-glow bg-grid-pattern overflow-hidden">
+      <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopBar onMenuClick={() => setMobileNavOpen(true)} />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
@@ -104,22 +109,22 @@ export default function App() {
       />
 
       <Route
-  path="/recommendations/:datasetId"
-  element={
-    <ProtectedLayout>
-      <Recommendations />
-    </ProtectedLayout>
-  }
-/>
+        path="/recommendations/:datasetId"
+        element={
+          <ProtectedLayout>
+            <Recommendations />
+          </ProtectedLayout>
+        }
+      />
 
-<Route
-  path="/what-if/:datasetId"
-  element={
-    <ProtectedLayout>
-      <WhatIfSimulator />
-    </ProtectedLayout>
-  }
-/>
+      <Route
+        path="/what-if/:datasetId"
+        element={
+          <ProtectedLayout>
+            <WhatIfSimulator />
+          </ProtectedLayout>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

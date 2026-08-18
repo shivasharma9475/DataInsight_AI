@@ -157,4 +157,72 @@ export async function preview(req, res, next) {
   }
 }
 
+export async function search(req, res, next) {
+  try {
+    const q = String(req.query.q || "").trim();
+
+    if (q.length < 2) {
+      return res.json({ results: [] });
+    }
+
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
+
+    const docs = await Dataset.find({
+      owner: req.userId,
+      $or: [
+        { filename: regex },
+        { "sourceMetadata.table": regex },
+        { "sourceMetadata.resource": regex },
+        { "sourceMetadata.database": regex },
+        { "sourceMetadata.schema": regex },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean();
+
+    res.json({
+      results: docs.map((doc) => ({
+        id: doc.mlDatasetId,
+        type: "dataset",
+        title: doc.filename,
+        description: `${doc.rowCount ?? 0} rows · ${doc.columnCount ?? 0} columns`,
+        datasetId: doc.mlDatasetId,
+        route: `/dashboard/${doc.mlDatasetId}`,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function notifications(req, res, next) {
+  try {
+    const docs = await Dataset.find({ owner: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    res.json({
+      notifications: docs.map((d) => ({
+        id: String(d._id),
+        type: d.isCleaned ? "dataset_cleaned" : "dataset_uploaded",
+        title: d.isCleaned
+          ? "Dataset cleaning completed"
+          : "Dataset uploaded",
+        message: d.isCleaned
+          ? `${d.filename} has been cleaned successfully.`
+          : `${d.filename} is ready for analysis.`,
+        datasetId: d.mlDatasetId,
+        route: `/dashboard/${d.mlDatasetId}`,
+        createdAt: d.createdAt,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 export { getOwnedDataset };

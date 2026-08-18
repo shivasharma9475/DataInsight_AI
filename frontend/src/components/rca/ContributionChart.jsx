@@ -45,7 +45,7 @@ export default function ContributionChart({ contributors, metric, title = "Contr
           />
           <Bar dataKey="change" radius={[0, 4, 4, 0]}>
             {data.map((d, i) => (
-              <Cell key={i} fill={d.change < 0 ? "#f87171" : "#34d399"} />
+              <Cell key={i} fill={d.change < 0 ? "#f87171" : "#3fae85"} />
             ))}
           </Bar>
         </BarChart>
