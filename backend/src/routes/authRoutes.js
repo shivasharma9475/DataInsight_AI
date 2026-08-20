@@ -11,10 +11,16 @@ import { authLimiter } from "../middleware/rateLimiter.js";
 const router = Router();
 
 router.post(
-  "/signup",
+  "/send-signup-otp",
   authLimiter,
   validate(signupSchema),
-  authController.signup
+  authController.sendSignupOtp
+);
+
+router.post(
+  "/verify-signup-otp",
+  authLimiter,
+  authController.verifySignupOtp
 );
 
 router.post(
@@ -24,9 +30,22 @@ router.post(
   authController.login
 );
 
-router.post("/google", authLimiter, authController.googleLogin);
-router.post("/forgot-password", authLimiter, authController.forgotPassword);
-router.post("/reset-password", authLimiter, authController.resetPassword);
-router.get("/me", requireAuth, authController.me);
+router.post(
+  "/forgot-password",
+  authLimiter,
+  authController.forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  authLimiter,
+  authController.resetPassword
+);
+
+router.get(
+  "/me",
+  requireAuth,
+  authController.me
+);
 
 export default router;

@@ -1,21 +1,28 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, MailCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState("details");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
   const videoRef = useRef(null);
   const nameRef = useRef(null);
+  const otpRef = useRef(null);
 
-  const { signup } = useAuth();
+  const { sendSignupOtp, verifySignupOtp } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +34,9 @@ export default function Signup() {
       setRevealed(true);
 
       setTimeout(() => {
-        nameRef.current?.focus();
+        if (step === "details") {
+          nameRef.current?.focus();
+        }
       }, 850);
     };
 
@@ -40,24 +49,88 @@ export default function Signup() {
       video.removeEventListener("ended", reveal);
       video.removeEventListener("error", reveal);
     };
-  }, []);
+  }, [step]);
 
-  const onSubmit = async (e) => {
+  useEffect(() => {
+    if (step === "otp") {
+      setTimeout(() => {
+        otpRef.current?.focus();
+      }, 100);
+    }
+  }, [step]);
+
+  const onSendOtp = async (e) => {
     e.preventDefault();
+
     setError("");
     setLoading(true);
 
     try {
-      await signup(name, email, password);
-      navigate("/upload");
+      await sendSignupOtp(name, email, password);
+
+      setOtp("");
+      setStep("otp");
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-        "Signup failed. Please try again."
+          err.response?.data?.message ||
+          "Unable to send OTP. Please try again."
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  const onVerifyOtp = async (e) => {
+    e.preventDefault();
+
+    setError("");
+
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Please enter the 6-digit OTP.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await verifySignupOtp(email, otp);
+
+      navigate("/upload");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Invalid or expired OTP."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResendOtp = async () => {
+    setError("");
+    setResendLoading(true);
+
+    try {
+      await sendSignupOtp(name, email, password);
+
+      setOtp("");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Unable to resend OTP."
+      );
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const changeDetails = () => {
+    setError("");
+    setOtp("");
+    setStep("details");
   };
 
   return (
@@ -108,119 +181,213 @@ export default function Signup() {
           {/* Heading */}
           <div className="mb-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
             <span className="h-px w-6 bg-brand-300" />
-            Get started
+            {step === "details" ? "Get started" : "Verify email"}
           </div>
 
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Create account.
-          </h1>
+          {step === "details" ? (
+            <>
+              <h1 className="text-4xl font-semibold tracking-tight">
+                Create account.
+              </h1>
 
-          <p className="mt-3 mb-7 text-sm leading-6 text-slate-400">
-            Start turning your datasets into actionable insights.
-          </p>
+              <p className="mt-3 mb-7 text-sm leading-6 text-slate-400">
+                Start turning your datasets into actionable insights.
+              </p>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-4 rounded-xl border border-red-400/10 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
-              {error}
-            </div>
-          )}
+              {/* Error */}
+              {error && (
+                <div className="mb-4 rounded-xl border border-red-400/10 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
 
-          <form
-            onSubmit={onSubmit}
-            className="flex flex-col gap-4"
-          >
-            {/* Name */}
-            <div className="grid gap-2">
-              <label className="text-sm text-slate-300">
-                Full name
-              </label>
+              <form
+                onSubmit={onSendOtp}
+                className="flex flex-col gap-4"
+              >
+                {/* Name */}
+                <div className="grid gap-2">
+                  <label className="text-sm text-slate-300">
+                    Full name
+                  </label>
 
-              <input
-                ref={nameRef}
-                type="text"
-                required
-                placeholder="Your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
-              />
-            </div>
+                  <input
+                    ref={nameRef}
+                    type="text"
+                    required
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+                  />
+                </div>
 
-            {/* Email */}
-            <div className="grid gap-2">
-              <label className="text-sm text-slate-300">
-                Email address
-              </label>
+                {/* Email */}
+                <div className="grid gap-2">
+                  <label className="text-sm text-slate-300">
+                    Email address
+                  </label>
 
-              <input
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
-              />
-            </div>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+                  />
+                </div>
 
-            {/* Password */}
-            <div className="grid gap-2">
-              <label className="text-sm text-slate-300">
-                Password
-              </label>
+                {/* Password */}
+                <div className="grid gap-2">
+                  <label className="text-sm text-slate-300">
+                    Password
+                  </label>
 
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={6}
-                  placeholder="Minimum 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 pr-12 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
-                />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      placeholder="Minimum 8 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 pr-12 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword((prev) => !prev)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:text-slate-200"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={17} />
+                      ) : (
+                        <Eye size={17} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-2 h-12 w-full rounded-xl bg-brand-500 font-semibold text-slate-950 shadow-[0_14px_34px_rgba(16,185,129,0.15)] transition hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_18px_40px_rgba(16,185,129,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? "Sending OTP..." : "Continue"}
+                </button>
+              </form>
+
+              {/* Login link */}
+              <p className="mt-6 text-center text-sm text-slate-500">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="text-brand-300 transition hover:text-brand-200 hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </>
+          ) : (
+            <>
+              {/* OTP Step */}
+              <div className="mb-6">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-400/10 text-brand-300">
+                  <MailCheck size={23} />
+                </div>
+
+                <h1 className="text-4xl font-semibold tracking-tight">
+                  Check your email.
+                </h1>
+
+                <p className="mt-3 text-sm leading-6 text-slate-400">
+                  We sent a 6-digit verification code to
+                  <span className="block mt-1 font-medium text-slate-200">
+                    {email}
+                  </span>
+                </p>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="mb-4 rounded-xl border border-red-400/10 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <form
+                onSubmit={onVerifyOtp}
+                className="flex flex-col gap-4"
+              >
+                <div className="grid gap-2">
+                  <label className="text-sm text-slate-300">
+                    Verification code
+                  </label>
+
+                  <input
+                    ref={otpRef}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    required
+                    placeholder="Enter 6-digit OTP"
+                    value={otp}
+                    onChange={(e) =>
+                      setOtp(
+                        e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 6)
+                      )
+                    }
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-center text-lg font-semibold tracking-[0.35em] text-white outline-none transition placeholder:text-sm placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="mt-2 h-12 w-full rounded-xl bg-brand-500 font-semibold text-slate-950 shadow-[0_14px_34px_rgba(16,185,129,0.15)] transition hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_18px_40px_rgba(16,185,129,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading
+                    ? "Verifying..."
+                    : "Verify & Create Account"}
+                </button>
+              </form>
+
+              {/* OTP actions */}
+              <div className="mt-5 flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={changeDetails}
+                  className="flex items-center gap-1.5 text-slate-400 transition hover:text-slate-200"
+                >
+                  <ArrowLeft size={15} />
+                  Change details
+                </button>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowPassword((prev) => !prev)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:text-slate-200"
+                  onClick={onResendOtp}
+                  disabled={resendLoading}
+                  className="text-brand-300 transition hover:text-brand-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {showPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
+                  {resendLoading ? "Sending..." : "Resend OTP"}
                 </button>
               </div>
-            </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 h-12 w-full rounded-xl bg-brand-500 font-semibold text-slate-950 shadow-[0_14px_34px_rgba(16,185,129,0.15)] transition hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_18px_40px_rgba(16,185,129,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading
-                ? "Creating account..."
-                : "Create account"}
-            </button>
-          </form>
-
-          {/* Login link */}
-          <p className="mt-6 text-center text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-brand-300 transition hover:text-brand-200 hover:underline"
-            >
-              Sign in
-            </Link>
-          </p>
+              <p className="mt-5 text-center text-xs leading-5 text-slate-500">
+                OTP is valid for 10 minutes.
+              </p>
+            </>
+          )}
         </div>
       </section>
 
@@ -267,7 +434,8 @@ export default function Signup() {
         }
 
         .animate-login-card {
-          animation: login-card 850ms cubic-bezier(0.16, 1, 0.3, 1) 180ms forwards;
+          animation: login-card 850ms cubic-bezier(0.16, 1, 0.3, 1)
+            180ms forwards;
         }
 
         @media (prefers-reduced-motion: reduce) {

@@ -8,7 +8,9 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("dia_token");
+  const token =
+    localStorage.getItem("dia_token") ||
+    sessionStorage.getItem("dia_token");
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -34,8 +36,17 @@ export const authApi = {
   signup: (data) =>
     api.post("/api/auth/signup", data),
 
-  login: (data) =>
-    api.post("/api/auth/login", data),
+  sendSignupOtp: (data) =>
+  api.post("/api/auth/send-signup-otp", data),
+
+verifySignupOtp: (data) =>
+  api.post("/api/auth/verify-signup-otp", data),
+
+  login: (email, password) =>
+  api.post("/api/auth/login", {
+    email,
+    password,
+  }),
 
   google: (id_token) =>
     api.post("/api/auth/google", { id_token }),
@@ -48,7 +59,7 @@ export const authApi = {
       token,
       new_password: newPassword,
     }),
-    
+
   me: () =>
     api.get("/api/auth/me"),
 };

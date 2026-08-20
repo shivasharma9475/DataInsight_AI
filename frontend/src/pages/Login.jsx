@@ -10,6 +10,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const videoRef = useRef(null);
   const emailRef = useRef(null);
@@ -47,7 +48,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       navigate("/upload");
     } catch (err) {
       setError(
@@ -188,9 +189,11 @@ export default function Login() {
             <div className="mt-1 flex items-center justify-between gap-4 text-xs">
               <label className="flex cursor-pointer items-center gap-2 text-slate-500">
                 <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 accent-brand-500"
-                />
+  type="checkbox"
+  checked={rememberMe}
+  onChange={(e) => setRememberMe(e.target.checked)}
+  className="h-3.5 w-3.5 accent-brand-500"
+/>
                 Remember me
               </label>
 
