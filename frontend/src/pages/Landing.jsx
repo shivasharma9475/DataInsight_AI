@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   RotateCcw,
 } from "lucide-react";
+import AuthBrand from "../components/AuthBrand";
 
 /* -----------------------------------------------------------
    Demo dataset — mirrors sample_data/sales_sample.csv so the
@@ -90,10 +91,9 @@ export default function Landing() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 md:px-12 py-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-black border border-brand-500/40 flex items-center justify-center">
-            <Sparkles size={16} className="text-brand-400" />
-          </div>
-          <span className="font-semibold text-lg">DataInsight AI</span>
+          <Link to="/" className="shrink-0">
+  <AuthBrand />
+</Link>
         </div>
         <div className="hidden md:flex items-center gap-6 text-sm text-slate-400">
           <a href="#sandbox" className="hover:text-white transition">Interactive Demo</a>

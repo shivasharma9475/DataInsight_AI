@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { authApi } from "../services/api.js";
+import AuthBrand from "../components/AuthBrand";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -87,6 +88,11 @@ export default function ForgotPassword() {
           }`}
         />
       </div>
+
+      {/* Brand - TOP LEFT */}
+    <div className="absolute left-6 top-6 z-30 md:left-8 md:top-7">
+      <AuthBrand />
+    </div>
 
       {/* Light Sweep */}
       <div

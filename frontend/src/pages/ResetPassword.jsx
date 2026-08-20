@@ -8,6 +8,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { authApi } from "../services/api";
+import AuthBrand from "../components/AuthBrand";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -124,6 +125,11 @@ export default function ResetPassword() {
           }`}
         />
       </div>
+
+       {/* Brand - TOP LEFT */}
+    <div className="absolute left-6 top-6 z-30 md:left-8 md:top-7">
+      <AuthBrand />
+    </div>
 
       {/* Light Sweep */}
       <div

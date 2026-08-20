@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, MailCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import AuthBrand from "../components/AuthBrand";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -157,6 +158,11 @@ export default function Signup() {
           }`}
         />
       </div>
+
+       {/* Brand - TOP LEFT */}
+    <div className="absolute left-6 top-6 z-30 md:left-8 md:top-7">
+      <AuthBrand />
+    </div>
 
       {/* Light sweep */}
       <div

@@ -115,15 +115,18 @@ export default function Sidebar({
         `}
       >
         <div
-          className="
-            relative w-10 h-10 min-w-10 rounded-xl
-            bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-700
-            flex items-center justify-center shrink-0
-            shadow-[0_0_24px_rgba(16,185,129,0.18)]
-          "
-        >
-          <Sparkles size={20} strokeWidth={2} className="text-white" />
-        </div>
+  className="
+    relative w-10 h-10 min-w-10 rounded-xl
+    flex items-center justify-center shrink-0
+    overflow-hidden
+  "
+>
+  <img
+    src="/logo.png"
+    alt="DataInsight AI"
+    className="w-full h-full object-contain"
+  />
+</div>
 
         <div
           className={`

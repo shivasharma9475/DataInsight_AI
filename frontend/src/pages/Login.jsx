@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import AuthBrand from "../components/AuthBrand";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -87,6 +88,10 @@ export default function Login() {
         />
       </div>
       
+      {/* Brand - TOP LEFT CORNER */}
+  <div className="absolute left-6 top-6 z-30 md:left-8 md:top-7">
+    <AuthBrand />
+  </div>
 
       {/* Light sweep */}
       <div
@@ -110,6 +115,8 @@ export default function Login() {
               : ""
           }`}
         >
+
+
           {/* Eyebrow */}
           <div className="mb-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
             <span className="h-px w-6 bg-brand-300" />
