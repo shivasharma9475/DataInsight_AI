@@ -43,6 +43,12 @@ export const authApi = {
   forgotPassword: (email) =>
     api.post("/api/auth/forgot-password", { email }),
 
+  resetPassword: (token, newPassword) =>
+    api.post("/api/auth/reset-password", {
+      token,
+      new_password: newPassword,
+    }),
+    
   me: () =>
     api.get("/api/auth/me"),
 };
@@ -76,6 +82,9 @@ export const datasetApi = {
 
   clean: (payload) =>
     api.post("/api/datasets/clean", payload),
+
+  delete: (id) =>
+    api.delete(`/api/datasets/${id}`),
 
   eda: (id) =>
     api.get(`/api/datasets/${id}/eda`),

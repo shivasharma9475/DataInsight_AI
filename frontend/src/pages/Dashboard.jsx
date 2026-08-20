@@ -51,6 +51,8 @@ export default function Dashboard() {
     }
   };
 
+ 
+
   if (loading || !profile) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -63,20 +65,30 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto pb-16">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="text-slate-400 text-sm">Automated overview of your dataset.</p>
-        </div>
-        <button
-          onClick={handleClean}
-          disabled={cleaning}
-          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 transition px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 self-start"
-        >
-          {cleaning ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-          {cleaning ? "Cleaning..." : "Auto-clean dataset"}
-        </button>
-      </div>
+     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 className="text-2xl font-semibold">Dashboard</h1>
+    <p className="text-slate-400 text-sm">
+      Automated overview of your dataset.
+    </p>
+  </div>
+
+  <div className="flex items-center gap-2 self-start">
+    <button
+      onClick={handleClean}
+      disabled={cleaning}
+      className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 transition px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50"
+    >
+      {cleaning ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : (
+        <Wand2 size={16} />
+      )}
+
+      {cleaning ? "Cleaning..." : "Auto-clean dataset"}
+    </button>
+  </div>
+</div>
 
       {cleanLog && (
         <div className="bg-emerald-500/10 text-emerald-300 text-sm px-4 py-3 rounded-xl mb-6">

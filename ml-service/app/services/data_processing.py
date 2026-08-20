@@ -376,3 +376,18 @@ def chart_payload(df: pd.DataFrame, profile: dict, max_categories: int = 12, max
         }
 
     return charts
+
+def delete_dataset(dataset_id: str) -> bool:
+    """
+    Permanently delete all files associated with a dataset.
+    """
+    import shutil
+
+    dataset_dir = _dataset_dir(dataset_id)
+
+    if not os.path.exists(dataset_dir):
+        return False
+
+    shutil.rmtree(dataset_dir)
+
+    return True

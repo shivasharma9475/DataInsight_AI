@@ -224,5 +224,36 @@ export async function notifications(req, res, next) {
   }
 }
 
+export async function deleteDataset(req, res, next) {
+  try {
+    const doc = await getOwnedDataset(
+      req.params.datasetId,
+      req.userId
+    );
+
+    const mlDatasetId = doc.mlDatasetId;
+
+    // First delete the physical dataset from ML service
+    await mlClient.delete(
+      `/datasets/${mlDatasetId}`
+    );
+
+    // Then delete MongoDB history record
+    await Dataset.deleteOne({
+      _id: doc._id,
+      owner: req.userId,
+    });
+
+    return res.json({
+      success: true,
+      message: "Dataset deleted successfully",
+      dataset_id: mlDatasetId,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 export { getOwnedDataset };

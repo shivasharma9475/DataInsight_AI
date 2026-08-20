@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
@@ -8,60 +8,280 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
+  const videoRef = useRef(null);
+  const emailRef = useRef(null);
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    const reveal = () => {
+      setRevealed(true);
+
+      setTimeout(() => {
+        emailRef.current?.focus();
+      }, 850);
+    };
+
+    video.addEventListener("ended", reveal);
+    video.addEventListener("error", reveal);
+
+    video.play().catch(reveal);
+
+    return () => {
+      video.removeEventListener("ended", reveal);
+      video.removeEventListener("error", reveal);
+    };
+  }, []);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       await login(email, password);
       navigate("/upload");
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed. Please try again.");
+      setError(
+        err.response?.data?.detail ||
+        "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-grid-glow flex items-center justify-center px-4">
-      <div className="w-full max-w-sm glass rounded-2xl p-8">
-        <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <Sparkles size={18} className="text-white" />
-          </div>
-          <span className="font-semibold text-lg">DataInsight AI</span>
-        </Link>
-        <h1 className="text-xl font-semibold mb-1">Welcome back</h1>
-        <p className="text-sm text-slate-400 mb-6">Log in to continue analyzing your data.</p>
+    <main
+      className={`relative min-h-screen overflow-hidden bg-black text-white ${
+        revealed ? "is-lit" : ""
+      }`}
+    >
+      {/* Background lighthouse video */}
+      <div className="absolute inset-0 overflow-hidden">
+        <video
+  ref={videoRef}
+  muted
+  playsInline
+  className="h-full w-full object-cover"
+>
+          <source src="/nprv.mp4" type="video/mp4" />
+        </video>
 
-        {error && <div className="bg-red-500/10 text-red-400 text-sm px-3 py-2 rounded-lg mb-4">{error}</div>}
-
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <input
-            type="email" required placeholder="Email" value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500"
-          />
-          <input
-            type="password" required placeholder="Password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500"
-          />
-          <button
-            type="submit" disabled={loading}
-            className="bg-brand-600 hover:bg-brand-500 transition rounded-lg py-2.5 text-sm font-medium disabled:opacity-50"
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
-        </form>
-
-        <p className="text-sm text-slate-400 mt-6 text-center">
-          Don't have an account? <Link to="/signup" className="text-brand-400 hover:underline">Sign up</Link>
-        </p>
+        {/* Dark cinematic overlay */}
+        <div
+          className={`absolute inset-0 transition-all duration-700 ${
+            revealed
+              ? "bg-black/50"
+              : "bg-black/20"
+          }`}
+        />
       </div>
-    </div>
+      
+
+      {/* Light sweep */}
+      <div
+        className={`pointer-events-none absolute left-[-20%] top-[18%] z-10 h-[64%] w-[140%] skew-x-[-11deg] bg-gradient-to-r from-brand-400/30 via-brand-400/10 to-transparent blur-3xl ${
+          revealed ? "animate-light-sweep" : "opacity-0"
+        }`}
+      />
+
+      {/* Login side */}
+      <section
+        className={`absolute inset-0 z-20 flex min-h-screen items-center justify-end px-6 py-20 md:px-[7vw] ${
+          revealed
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        } transition-opacity duration-500`}
+      >
+        <div
+          className={`w-full max-w-[380px] rounded-[28px] border border-white/15 bg-white/[0.08] p-8 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
+            revealed
+              ? "animate-login-card"
+              : ""
+          }`}
+        >
+          {/* Eyebrow */}
+          <div className="mb-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
+            <span className="h-px w-6 bg-brand-300" />
+            Member access
+          </div>
+
+          <h1 className="text-4xl font-semibold tracking-tight">
+            Welcome back.
+          </h1>
+
+          <p className="mt-3 mb-7 text-sm leading-6 text-slate-400">
+            Sign in to continue analyzing your data.
+          </p>
+
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-400/10 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          <form
+            onSubmit={onSubmit}
+            className="flex flex-col gap-4"
+          >
+            {/* Email */}
+            <div className="grid gap-2">
+              <label className="text-sm text-slate-300">
+                Email address
+              </label>
+
+              <input
+                ref={emailRef}
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="grid gap-2">
+              <label className="text-sm text-slate-300">
+                Password
+              </label>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 pr-12 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand-400/70 focus:bg-black/40 focus:ring-4 focus:ring-brand-400/10"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((prev) => !prev)
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:text-slate-200"
+                >
+                  {showPassword ? (
+                    <EyeOff size={17} />
+                  ) : (
+                    <Eye size={17} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="mt-1 flex items-center justify-between gap-4 text-xs">
+              <label className="flex cursor-pointer items-center gap-2 text-slate-500">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-brand-500"
+                />
+                Remember me
+              </label>
+
+              <Link
+  to="/forgot-password"
+  className="text-brand-300 transition hover:text-brand-200 hover:underline"
+>
+  Forgot password?
+</Link>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 h-12 w-full rounded-xl bg-brand-500 font-semibold text-slate-950 shadow-[0_14px_34px_rgba(16,185,129,0.15)] transition hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_18px_40px_rgba(16,185,129,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Logging in..." : "Sign in"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-slate-500">
+            New here?{" "}
+            <Link
+              to="/signup"
+              className="text-brand-300 transition hover:text-brand-200 hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <style>{`
+        @keyframes light-sweep {
+          0% {
+            opacity: 0;
+            transform: translateX(-34%) skewX(-11deg);
+          }
+
+          32% {
+            opacity: 0.75;
+          }
+
+          100% {
+            opacity: 0;
+            transform: translateX(62%) skewX(-11deg);
+          }
+        }
+
+        @keyframes login-card {
+          0% {
+            opacity: 0;
+            transform: translateY(28px) scale(0.94);
+            filter: blur(8px);
+          }
+
+          58% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.012);
+            filter: blur(0);
+          }
+
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+          }
+        }
+
+        .animate-light-sweep {
+          animation: light-sweep 900ms ease-out both;
+        }
+
+        .animate-login-card {
+          animation: login-card 850ms cubic-bezier(0.16, 1, 0.3, 1) 180ms forwards;
+        }
+
+        @media (max-width: 800px) {
+          .animate-login-card {
+            animation-delay: 100ms;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-light-sweep,
+          .animate-login-card {
+            animation: none;
+          }
+        }
+      `}</style>
+    </main>
   );
 }

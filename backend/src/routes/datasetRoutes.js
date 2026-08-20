@@ -52,6 +52,7 @@ router.post("/upload", upload.single("file"), datasetController.upload);
 router.get("/search", datasetController.search);
 router.get("/history", datasetController.history);
 router.get("/notifications", datasetController.notifications);
+router.delete("/:datasetId",datasetController.deleteDataset);
 router.get("/:datasetId/profile", datasetController.profile);
 router.get("/:datasetId/cleaning-suggestions", datasetController.cleaningSuggestions);
 router.post("/clean", datasetController.clean);
@@ -59,5 +60,6 @@ router.get("/:datasetId/eda", datasetController.eda);
 router.get("/:datasetId/outliers", datasetController.outliers);
 router.get("/:datasetId/charts", datasetController.charts);
 router.get("/:datasetId/preview", datasetController.preview);
+
 
 export default router;

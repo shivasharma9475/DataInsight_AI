@@ -6,6 +6,7 @@ no ownership concept — the Node/Express backend is the only caller,
 authenticates end users itself, and forwards requests here with an
 internal API key. This mirrors the InventoryPro pattern: Node owns the
 web-facing app, Python owns the heavy data/ML work.
+python -m uvicorn app.main:app --reload
 """
 import os
 import io
@@ -118,6 +119,38 @@ async def charts(dataset_id: str):
 async def preview(dataset_id: str, limit: int = 50):
     df = _load_or_404(dataset_id)
     return {"columns": list(df.columns), "rows": df.head(limit).fillna("").astype(str).values.tolist()}
+
+@app.delete(
+    "/datasets/{dataset_id}",
+    dependencies=[Depends(require_internal_key)]
+)
+async def delete_dataset(dataset_id: str):
+    try:
+        deleted = dp.delete_dataset(dataset_id)
+
+        if not deleted:
+            raise HTTPException(
+                status_code=404,
+                detail="Dataset not found"
+            )
+
+        return {
+            "success": True,
+            "message": "Dataset deleted successfully",
+            "dataset_id": dataset_id,
+        }
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete dataset: {str(e)}"
+        )
 
 
 @app.get("/ml/{dataset_id}/recommend", dependencies=[Depends(require_internal_key)])
@@ -258,15 +291,53 @@ async def excel_report(dataset_id: str):
 @app.get("/reports/{dataset_id}/pdf", dependencies=[Depends(require_internal_key)])
 async def pdf_report(dataset_id: str, filename: str = "dataset"):
     df = _load_or_404(dataset_id)
-    profile_data = dp.profile_dataframe(df)
-    stats = dp.descriptive_statistics(df, profile_data["numerical_columns"])
-    corr = dp.correlation_matrix(df, profile_data["numerical_columns"])
-    outliers_data = dp.detect_outliers_iqr(df, profile_data["numerical_columns"])
-    insights = ai_engine.generate_local_insights(profile_data, stats, corr, outliers_data)
-    summary = ai_engine.generate_local_summary(profile_data, insights)
-    content = report_engine.build_pdf_report(filename, profile_data, insights, summary)
-    return StreamingResponse(io.BytesIO(content), media_type="application/pdf")
 
+    profile_data = dp.profile_dataframe(df)
+
+    stats = dp.descriptive_statistics(
+        df,
+        profile_data["numerical_columns"]
+    )
+
+    corr = dp.correlation_matrix(
+        df,
+        profile_data["numerical_columns"]
+    )
+
+    outliers_data = dp.detect_outliers_iqr(
+        df,
+        profile_data["numerical_columns"]
+    )
+
+    insights = ai_engine.generate_local_insights(
+        profile_data,
+        stats,
+        corr,
+        outliers_data
+    )
+
+    summary = ai_engine.generate_local_summary(
+        profile_data,
+        insights
+    )
+
+    content = report_engine.build_pdf_report(
+        filename=filename,
+        profile=profile_data,
+        stats=stats,
+        correlation=corr,
+        outliers=outliers_data,
+        insights=insights,
+        summary_text=summary,
+    )
+
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}_DataInsight_Report.pdf"'
+        }
+    )
 @app.post(
     "/recommendations",
     dependencies=[Depends(require_internal_key)],
