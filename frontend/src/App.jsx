@@ -16,7 +16,7 @@ import WhatIfSimulator from "./pages/WhatIfSimulator.jsx";
 import Reports from "./pages/Reports.jsx";
 import RootCause from "./pages/RootCause.jsx";
 import Sidebar from "./components/Sidebar.jsx";
-import TopBar from "./components/TopBar.jsx";
+import TopBar from "./components/Topbar.jsx";
 import Recommendations from "./pages/Recommendations.jsx";
 
 function ProtectedLayout({ children }) {
