@@ -1,16 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { UploadCloud, Check } from "lucide-react";
 
-/**
- * FluidUploadCircle
- *
- * Clean circular upload control:
- * - No background text
- * - Centered upload icon
- * - Smooth circular progress ring driven by `progress`
- * - Uses DataInsight AI green/teal theme
- * - Keeps the existing phase/progress/onClick API
- */
 export default function FluidUploadCircle({
   phase = "idle",
   progress = 0,
@@ -22,7 +13,6 @@ export default function FluidUploadCircle({
 
   const [displayProgress, setDisplayProgress] = useState(0);
 
-  // Smoothly animate the visual ring toward the real upload progress.
   useEffect(() => {
     const target = isSuccess
       ? 100
@@ -31,6 +21,7 @@ export default function FluidUploadCircle({
         : 0;
 
     let frame;
+
     const animate = () => {
       setDisplayProgress((current) => {
         const difference = target - current;
@@ -53,10 +44,14 @@ export default function FluidUploadCircle({
   const strokeWidth = 4;
   const radius = (size - strokeWidth * 2 - 6) / 2;
   const circumference = 2 * Math.PI * radius;
+
   const offset =
     circumference - (displayProgress / 100) * circumference;
 
-  const handleClick = () => {
+  // Prevent event bubbling to parent
+  const handleClick = (event) => {
+    event.stopPropagation();
+
     if (phase === "idle" && onClick) {
       onClick();
     }
@@ -94,7 +89,6 @@ export default function FluidUploadCircle({
         className="absolute inset-0 -rotate-90"
         aria-hidden="true"
       >
-        {/* Base ring */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -104,7 +98,6 @@ export default function FluidUploadCircle({
           strokeWidth={strokeWidth}
         />
 
-        {/* Progress ring */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -125,7 +118,6 @@ export default function FluidUploadCircle({
         />
       </svg>
 
-      {/* Center icon only — no text */}
       <span
         className={`absolute inset-0 flex items-center justify-center transition-transform duration-300 ${
           phase === "idle" ? "hover:scale-105" : ""
